@@ -1,0 +1,209 @@
+/**
+ * Retea Design System - Color Tokens
+ * Basado en la identidad de marca: paleta teal + neutral gray
+ *
+ * Jerarquía de colores:
+ * - Primary: Teal (acción principal, CTA, enlaces)
+ * - Neutral: Grays (texto, fondos, bordes)
+ * - Semantic: Success, Warning, Error, Info
+ * - Surface: Fondos de componentes
+ */
+
+:root {
+  /* ============================================
+     PRIMARY COLORS - Teal Brand Palette
+     ============================================ */
+
+  /* Brand teal scale (from palette-color.svg) */
+  --color-primary-50: #9dd9d2;   /* Lightest teal - backgrounds, hover states */
+  --color-primary-100: #79bcb8;  /* Light teal - subtle accents */
+  --color-primary-200: #5ec2b7;  /* Medium-light teal - secondary actions */
+  --color-primary-400: #2ca6a4;  /* Primary teal - main brand color */
+  --color-primary-500: #3aa7a3;  /* Favicon teal - primary actions (from favicon.svg) */
+  --color-primary-600: #2e8583;  /* Darker teal - hover states */
+  --color-primary-700: #236866;  /* Dark teal - pressed states */
+  --color-primary-800: #1a4f4d;  /* Very dark teal - text on light backgrounds */
+  --color-primary-900: #0f3231;  /* Darkest teal - high contrast text */
+
+  /* Primary semantic aliases */
+  --color-primary: var(--color-primary-500);
+  --color-primary-hover: var(--color-primary-600);
+  --color-primary-active: var(--color-primary-700);
+  --color-primary-light: var(--color-primary-50);
+  --color-primary-dark: var(--color-primary-900);
+
+  /* ============================================
+     NEUTRAL COLORS - Grays
+     ============================================ */
+
+  /* Logo gray (#333333 from logo.svg) + extended scale */
+  --color-neutral-0: #ffffff;    /* Pure white - card backgrounds */
+  --color-neutral-50: #f9fafb;   /* Off-white - page backgrounds */
+  --color-neutral-100: #f3f4f6;  /* Light gray - hover backgrounds */
+  --color-neutral-200: #e5e7eb;  /* Border gray - dividers */
+  --color-neutral-300: #d1d5db;  /* Medium-light gray - disabled states */
+  --color-neutral-400: #9ca3af;  /* Medium gray - placeholders */
+  --color-neutral-500: #6b7280;  /* Text gray - secondary text */
+  --color-neutral-600: #4b5563;  /* Dark gray - body text */
+  --color-neutral-700: #374151;  /* Darker gray - headings */
+  --color-neutral-800: #333333;  /* Logo gray - primary headings (from logo.svg) */
+  --color-neutral-900: #1f2937;  /* Darkest gray - high emphasis text */
+  --color-neutral-950: #0f1419;  /* Near black - maximum contrast */
+
+  /* Neutral semantic aliases */
+  --color-text-primary: var(--color-neutral-800);
+  --color-text-secondary: var(--color-neutral-600);
+  --color-text-tertiary: var(--color-neutral-500);
+  --color-text-disabled: var(--color-neutral-400);
+  --color-text-inverse: var(--color-neutral-0);
+
+  --color-border: var(--color-neutral-200);
+  --color-border-strong: var(--color-neutral-300);
+  --color-divider: var(--color-neutral-200);
+
+  /* ============================================
+     SEMANTIC COLORS
+     ============================================ */
+
+  /* Success - Green (para estados completados, aprobaciones) */
+  --color-success-50: #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+  --color-success-900: #064e3b;
+
+  --color-success: var(--color-success-500);
+  --color-success-light: var(--color-success-100);
+  --color-success-dark: var(--color-success-700);
+
+  /* Warning - Amber (para estados pendientes, advertencias) */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  --color-warning-900: #78350f;
+
+  --color-warning: var(--color-warning-500);
+  --color-warning-light: var(--color-warning-100);
+  --color-warning-dark: var(--color-warning-700);
+
+  /* Error - Red (para estados rechazados, errores) */
+  --color-error-50: #fef2f2;
+  --color-error-100: #fee2e2;
+  --color-error-500: #ef4444;
+  --color-error-600: #dc2626;
+  --color-error-700: #b91c1c;
+  --color-error-900: #7f1d1d;
+
+  --color-error: var(--color-error-500);
+  --color-error-light: var(--color-error-100);
+  --color-error-dark: var(--color-error-700);
+
+  /* Info - Blue (para información, estados en progreso) */
+  --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
+  --color-info-700: #1d4ed8;
+  --color-info-900: #1e3a8a;
+
+  --color-info: var(--color-info-500);
+  --color-info-light: var(--color-info-100);
+  --color-info-dark: var(--color-info-700);
+
+  /* ============================================
+     SURFACE COLORS - Backgrounds & Overlays
+     ============================================ */
+
+  --color-surface-primary: var(--color-neutral-0);
+  --color-surface-secondary: var(--color-neutral-50);
+  --color-surface-tertiary: var(--color-neutral-100);
+  --color-surface-overlay: rgba(15, 23, 42, 0.5);
+  --color-surface-elevated: var(--color-neutral-0);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, var(--color-primary-400) 0%, var(--color-primary-600) 100%);
+  --gradient-surface: linear-gradient(180deg, var(--color-neutral-0) 0%, var(--color-neutral-50) 100%);
+
+  /* ============================================
+     OPACITY MODIFIERS
+     ============================================ */
+
+  --opacity-disabled: 0.4;
+  --opacity-hover: 0.8;
+  --opacity-overlay: 0.5;
+  --opacity-subtle: 0.1;
+
+  /* ============================================
+     SHADOWS
+     ============================================ */
+
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+
+  /* Teal accent shadows */
+  --shadow-primary: 0 4px 14px 0 rgba(42, 166, 164, 0.2);
+  --shadow-primary-lg: 0 10px 30px 0 rgba(42, 166, 164, 0.3);
+}
+
+/* ============================================
+   DARK MODE (future support)
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Invertir jerarquía de neutrals en dark mode */
+    --color-surface-primary: var(--color-neutral-900);
+    --color-surface-secondary: var(--color-neutral-800);
+    --color-surface-tertiary: var(--color-neutral-700);
+
+    --color-text-primary: var(--color-neutral-100);
+    --color-text-secondary: var(--color-neutral-300);
+    --color-text-tertiary: var(--color-neutral-400);
+
+    --color-border: var(--color-neutral-700);
+    --color-border-strong: var(--color-neutral-600);
+  }
+}
+
+/* ============================================
+   USAGE EXAMPLES
+   ============================================ */
+
+/*
+  Botón primario:
+  .btn-primary {
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    box-shadow: var(--shadow-primary);
+  }
+
+  .btn-primary:hover {
+    background: var(--color-primary-hover);
+  }
+
+  Card:
+  .card {
+    background: var(--color-surface-primary);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+  }
+
+  Badge de estado:
+  .badge-success {
+    background: var(--color-success-light);
+    color: var(--color-success-dark);
+  }
+
+  .badge-warning {
+    background: var(--color-warning-light);
+    color: var(--color-warning-dark);
+  }
+*/

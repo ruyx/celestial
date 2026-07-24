@@ -1,0 +1,425 @@
+/**
+ * Retea Design System - Animation Tokens
+ * Sistema de animaciones fluidas basado en principios de Emil Kowalski
+ *
+ * Principios:
+ * - Easing curves naturales (cubic-bezier)
+ * - Duraciones basadas en distancia/complejidad
+ * - Respeto por prefers-reduced-motion
+ * - Animaciones con propósito (feedback, jerarquía, transiciones de estado)
+ */
+
+:root {
+  /* ============================================
+     DURATIONS - Basado en complejidad/distancia
+     ============================================ */
+
+  --duration-instant: 0ms;          /* Sin animación */
+  --duration-fast: 150ms;           /* Micro-interacciones (hover, ripple) */
+  --duration-normal: 250ms;         /* Transiciones estándar (dropdown, tooltip) */
+  --duration-moderate: 350ms;       /* Animaciones complejas (modal, drawer) */
+  --duration-slow: 500ms;           /* Transiciones de página */
+  --duration-slower: 700ms;         /* Animaciones especiales */
+
+  /* ============================================
+     EASING FUNCTIONS - Natural motion curves
+     ============================================ */
+
+  /* Standard easings */
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Custom easings - Apple-inspired */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);        /* Material Design standard */
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);        /* Salida acentuada */
+  --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);        /* Desaceleración suave */
+  --ease-accelerate: cubic-bezier(0.4, 0, 1, 1);        /* Aceleración rápida */
+
+  /* Bounce & Spring */
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  /* iOS-style easings */
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);           /* Animaciones iOS */
+  --ease-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);  /* Transición ultra suave */
+
+  /* ============================================
+     SEMANTIC ALIASES - Casos de uso específicos
+     ============================================ */
+
+  /* Micro-interactions (hover, focus, active) */
+  --transition-hover: background-color var(--duration-fast) var(--ease-out),
+                      transform var(--duration-fast) var(--ease-out),
+                      box-shadow var(--duration-fast) var(--ease-out);
+
+  /* Elementos que entran/salen */
+  --transition-fade-in: opacity var(--duration-normal) var(--ease-out);
+  --transition-fade-out: opacity var(--duration-fast) var(--ease-in);
+
+  --transition-slide-up: transform var(--duration-normal) var(--ease-emphasized),
+                         opacity var(--duration-normal) var(--ease-out);
+
+  --transition-slide-down: transform var(--duration-normal) var(--ease-emphasized),
+                           opacity var(--duration-normal) var(--ease-out);
+
+  /* Modals y overlays */
+  --transition-modal: transform var(--duration-moderate) var(--ease-ios),
+                      opacity var(--duration-moderate) var(--ease-out);
+
+  --transition-backdrop: opacity var(--duration-normal) var(--ease-out);
+
+  /* Dropdowns y popovers */
+  --transition-dropdown: transform var(--duration-normal) var(--ease-emphasized),
+                         opacity var(--duration-normal) var(--ease-out);
+
+  /* Elementos de formulario */
+  --transition-input: border-color var(--duration-fast) var(--ease-out),
+                      box-shadow var(--duration-fast) var(--ease-out);
+
+  /* Skeleton loaders */
+  --transition-skeleton: opacity var(--duration-slower) var(--ease-in-out);
+
+  /* ============================================
+     KEYFRAME ANIMATIONS
+     ============================================ */
+
+  /* Fade */
+  --animation-fade-in: fadeIn var(--duration-normal) var(--ease-out) forwards;
+  --animation-fade-out: fadeOut var(--duration-fast) var(--ease-in) forwards;
+
+  /* Slide */
+  --animation-slide-up: slideUp var(--duration-normal) var(--ease-emphasized) forwards;
+  --animation-slide-down: slideDown var(--duration-normal) var(--ease-emphasized) forwards;
+  --animation-slide-left: slideLeft var(--duration-normal) var(--ease-emphasized) forwards;
+  --animation-slide-right: slideRight var(--duration-normal) var(--ease-emphasized) forwards;
+
+  /* Scale */
+  --animation-scale-in: scaleIn var(--duration-normal) var(--ease-spring) forwards;
+  --animation-scale-out: scaleOut var(--duration-fast) var(--ease-in) forwards;
+
+  /* Bounce */
+  --animation-bounce: bounce var(--duration-moderate) var(--ease-bounce);
+
+  /* Spin (loaders) */
+  --animation-spin: spin 1s var(--ease-linear) infinite;
+  --animation-spin-slow: spin 2s var(--ease-linear) infinite;
+
+  /* Pulse (skeleton, loading) */
+  --animation-pulse: pulse 2s var(--ease-in-out) infinite;
+
+  /* Shimmer (loading states) */
+  --animation-shimmer: shimmer 2s var(--ease-linear) infinite;
+}
+
+/* ============================================
+   KEYFRAMES DEFINITIONS
+   ============================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideLeft {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideRight {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleOut {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* ============================================
+   ANIMATION UTILITY CLASSES
+   ============================================ */
+
+/* Fade */
+.animate-fade-in {
+  animation: var(--animation-fade-in);
+}
+
+.animate-fade-out {
+  animation: var(--animation-fade-out);
+}
+
+/* Slide */
+.animate-slide-up {
+  animation: var(--animation-slide-up);
+}
+
+.animate-slide-down {
+  animation: var(--animation-slide-down);
+}
+
+.animate-slide-left {
+  animation: var(--animation-slide-left);
+}
+
+.animate-slide-right {
+  animation: var(--animation-slide-right);
+}
+
+/* Scale */
+.animate-scale-in {
+  animation: var(--animation-scale-in);
+}
+
+.animate-scale-out {
+  animation: var(--animation-scale-out);
+}
+
+/* Loaders */
+.animate-spin {
+  animation: var(--animation-spin);
+}
+
+.animate-pulse {
+  animation: var(--animation-pulse);
+}
+
+.animate-shimmer {
+  animation: var(--animation-shimmer);
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-100) 0%,
+    var(--color-neutral-200) 50%,
+    var(--color-neutral-100) 100%
+  );
+  background-size: 1000px 100%;
+}
+
+/* ============================================
+   TRANSITION UTILITY CLASSES
+   ============================================ */
+
+.transition-hover {
+  transition: var(--transition-hover);
+}
+
+.transition-all {
+  transition: all var(--duration-normal) var(--ease-standard);
+}
+
+.transition-colors {
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+.transition-transform {
+  transition: transform var(--duration-normal) var(--ease-emphasized);
+}
+
+.transition-opacity {
+  transition: opacity var(--duration-normal) var(--ease-out);
+}
+
+/* ============================================
+   ACCESSIBILITY - Reduced Motion
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================
+   INTERACTION STATES - Consistencia
+   ============================================ */
+
+/* Hover genérico */
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  transition: var(--transition-hover);
+}
+
+/* Scale en hover */
+.hover-scale:hover {
+  transform: scale(1.05);
+  transition: transform var(--duration-fast) var(--ease-spring);
+}
+
+/* Brightness en hover (para imágenes) */
+.hover-brightness:hover {
+  filter: brightness(1.1);
+  transition: filter var(--duration-fast) var(--ease-out);
+}
+
+/* Active state */
+.active-scale:active {
+  transform: scale(0.98);
+  transition: transform var(--duration-fast) var(--ease-in);
+}
+
+/* Focus visible */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  transition: outline-offset var(--duration-fast) var(--ease-out);
+}
+
+/* ============================================
+   USAGE EXAMPLES
+   ============================================ */
+
+/*
+  Button con hover suave:
+  .btn {
+    transition: var(--transition-hover);
+  }
+  .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+
+  Modal con entrada suave:
+  .modal {
+    animation: var(--animation-scale-in);
+  }
+
+  Dropdown con slide:
+  .dropdown-menu {
+    animation: var(--animation-slide-down);
+  }
+
+  Loading skeleton:
+  .skeleton {
+    animation: var(--animation-pulse);
+  }
+
+  Shimmer loader:
+  .shimmer-loader {
+    animation: var(--animation-shimmer);
+    background: linear-gradient(
+      90deg,
+      var(--color-neutral-100) 0%,
+      var(--color-neutral-200) 50%,
+      var(--color-neutral-100) 100%
+    );
+    background-size: 1000px 100%;
+  }
+
+  Card con hover lift:
+  .card {
+    transition: var(--transition-hover);
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-xl);
+  }
+*/

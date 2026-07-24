@@ -1,0 +1,401 @@
+/**
+ * Retea - Global Styles
+ * Integración de TailwindCSS con Design System
+ */
+
+/* ============================================
+   TAILWIND DIRECTIVES
+   ============================================ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   GLOBAL BASE STYLES
+   ============================================ */
+
+@layer base {
+  /* Better font rendering */
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply font-body text-base text-neutral-800 bg-neutral-50;
+  }
+
+  /* Headings */
+  h1 {
+    @apply font-heading text-5xl font-bold leading-tight text-neutral-800;
+  }
+
+  h2 {
+    @apply font-heading text-4xl font-bold leading-tight text-neutral-800;
+  }
+
+  h3 {
+    @apply font-heading text-3xl font-semibold leading-snug text-neutral-800;
+  }
+
+  h4 {
+    @apply font-heading text-2xl font-semibold leading-snug text-neutral-800;
+  }
+
+  h5 {
+    @apply font-heading text-xl font-medium leading-normal text-neutral-800;
+  }
+
+  h6 {
+    @apply font-heading text-lg font-medium leading-normal text-neutral-800;
+  }
+
+  /* Links */
+  a {
+    @apply text-primary transition-colors duration-fast;
+  }
+
+  a:hover {
+    @apply text-primary-600 underline;
+  }
+
+  /* Focus visible */
+  :focus-visible {
+    @apply outline-2 outline-primary outline-offset-2;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-primary-50 text-primary-900;
+  }
+
+  /* Scrollbar (Webkit only) */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-neutral-100;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-neutral-300 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-neutral-400;
+  }
+}
+
+/* ============================================
+   CUSTOM COMPONENTS
+   ============================================ */
+
+@layer components {
+  /* ========== BUTTONS ========== */
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2;
+    @apply px-4 py-3;
+    @apply font-heading font-semibold text-base;
+    @apply rounded-md;
+    @apply transition-all duration-fast;
+    @apply cursor-pointer select-none;
+  }
+
+  .btn-primary {
+    @apply btn;
+    @apply bg-primary text-white;
+    @apply shadow-primary;
+  }
+
+  .btn-primary:hover {
+    @apply bg-primary-600 -translate-y-0.5 shadow-primary-lg;
+  }
+
+  .btn-primary:active {
+    @apply translate-y-0 shadow-sm;
+  }
+
+  .btn-primary:disabled {
+    @apply bg-neutral-300 text-neutral-500 cursor-not-allowed opacity-40 shadow-none;
+  }
+
+  .btn-secondary {
+    @apply btn;
+    @apply bg-transparent text-primary;
+    @apply border-2 border-primary;
+  }
+
+  .btn-secondary:hover {
+    @apply bg-primary-50 border-primary-600 text-primary-600;
+  }
+
+  .btn-tertiary {
+    @apply btn;
+    @apply bg-transparent text-primary;
+  }
+
+  .btn-tertiary:hover {
+    @apply bg-primary-50 text-primary-600;
+  }
+
+  .btn-danger {
+    @apply btn;
+    @apply bg-error text-white shadow-sm;
+  }
+
+  .btn-danger:hover {
+    @apply bg-error-700 -translate-y-0.5 shadow-md;
+  }
+
+  /* Button Sizes */
+  .btn-sm {
+    @apply px-3 py-2 text-sm gap-1;
+  }
+
+  .btn-lg {
+    @apply px-6 py-4 text-md gap-3;
+  }
+
+  /* Icon Only Buttons */
+  .btn-icon-only {
+    @apply p-0 w-10 h-10 rounded-full;
+  }
+
+  .btn-icon-only.btn-sm {
+    @apply w-8 h-8;
+  }
+
+  .btn-icon-only.btn-lg {
+    @apply w-12 h-12;
+  }
+
+  /* ========== CARDS ========== */
+
+  .card {
+    @apply flex flex-col gap-4;
+    @apply p-6;
+    @apply bg-white border border-neutral-200 rounded-lg shadow-sm;
+    @apply transition-all duration-normal;
+    @apply w-full;
+  }
+
+  .card:hover {
+    @apply shadow-md;
+  }
+
+  .card-clickable {
+    @apply cursor-pointer select-none;
+  }
+
+  .card-clickable:hover {
+    @apply -translate-y-0.5 shadow-lg border-primary-50;
+  }
+
+  .card-clickable:active {
+    @apply translate-y-0;
+  }
+
+  /* Card Sizes */
+  .card-sm {
+    @apply p-4 gap-2;
+  }
+
+  .card-lg {
+    @apply p-8 gap-6;
+  }
+
+  /* Card Variants */
+  .card-campaign {
+    @apply border-l-4 border-l-primary;
+    background: linear-gradient(135deg, rgba(58, 167, 163, 0.02) 0%, white 100%);
+  }
+
+  .card-success {
+    @apply border-l-4 border-l-success;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.02) 0%, white 100%);
+  }
+
+  .card-warning {
+    @apply border-l-4 border-l-warning;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.02) 0%, white 100%);
+  }
+
+  .card-danger {
+    @apply border-l-4 border-l-error;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.02) 0%, white 100%);
+  }
+
+  /* ========== BADGES ========== */
+
+  .badge {
+    @apply inline-flex items-center justify-center gap-1;
+    @apply px-2 py-1;
+    @apply font-body font-semibold text-xs uppercase tracking-wide;
+    @apply rounded-sm;
+    @apply select-none;
+  }
+
+  .badge-success {
+    @apply bg-success-100 text-success-700 border border-success;
+  }
+
+  .badge-warning {
+    @apply bg-warning-100 text-warning-700 border border-warning;
+  }
+
+  .badge-error {
+    @apply bg-error-100 text-error-700 border border-error;
+  }
+
+  .badge-info {
+    @apply bg-info-100 text-info-700 border border-info;
+  }
+
+  .badge-primary {
+    @apply bg-primary-50 text-primary-900 border border-primary;
+  }
+
+  .badge-neutral {
+    @apply bg-neutral-100 text-neutral-700 border border-neutral-300;
+  }
+
+  /* Badge Solid Variants */
+  .badge-solid-success {
+    @apply badge bg-success text-white border-0;
+  }
+
+  .badge-solid-warning {
+    @apply badge bg-warning text-white border-0;
+  }
+
+  .badge-solid-error {
+    @apply badge bg-error text-white border-0;
+  }
+
+  .badge-solid-primary {
+    @apply badge bg-primary text-white border-0;
+  }
+
+  /* ========== FORMS ========== */
+
+  .input {
+    @apply block w-full;
+    @apply px-4 py-3;
+    @apply font-body text-base text-neutral-800;
+    @apply bg-white border border-neutral-200 rounded-md;
+    @apply transition-all duration-fast;
+    @apply outline-none;
+  }
+
+  .input::placeholder {
+    @apply text-neutral-400;
+  }
+
+  .input:hover {
+    @apply border-neutral-300;
+  }
+
+  .input:focus {
+    @apply border-primary ring-4 ring-primary/10;
+  }
+
+  .input:disabled {
+    @apply bg-neutral-100 text-neutral-400 cursor-not-allowed opacity-40;
+  }
+
+  .input-error {
+    @apply border-error;
+  }
+
+  .input-error:focus {
+    @apply border-error ring-error/10;
+  }
+
+  .input-success {
+    @apply border-success;
+  }
+
+  .input-success:focus {
+    @apply border-success ring-success/10;
+  }
+
+  /* Input Sizes */
+  .input-sm {
+    @apply px-3 py-2 text-sm;
+  }
+
+  .input-lg {
+    @apply px-5 py-4 text-md;
+  }
+}
+
+/* ============================================
+   CUSTOM UTILITIES
+   ============================================ */
+
+@layer utilities {
+  /* Minimum heights (crítico para contenido dinámico) */
+  .min-h-button {
+    min-height: 44px; /* Touch target iOS */
+  }
+
+  .min-h-card {
+    min-height: 120px;
+  }
+
+  /* Text utilities */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Focus ring */
+  .focus-ring {
+    @apply outline-2 outline-primary outline-offset-2;
+  }
+
+  /* Hover lift */
+  .hover-lift {
+    @apply transition-transform duration-fast;
+  }
+
+  .hover-lift:hover {
+    @apply -translate-y-1 shadow-lg;
+  }
+}
+
+/* ============================================
+   ACCESSIBILITY - Reduced Motion
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================
+   RESPONSIVE - Mobile Optimizations
+   ============================================ */
+
+@media (max-width: 640px) {
+  /* Prevent iOS zoom on input focus */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  /* Full-width buttons on mobile */
+  .btn-mobile-full {
+    @apply w-full;
+  }
+}

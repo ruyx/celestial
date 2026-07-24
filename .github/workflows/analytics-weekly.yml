@@ -1,0 +1,61 @@
+name: Weekly Analytics Collection
+
+on:
+  schedule:
+    # Domingos a las 3:00 AM UTC (4:00 AM Spain en invierno, 5:00 AM en verano)
+    - cron: '0 3 * * 0'
+
+  # Permitir ejecución manual desde GitHub Actions UI
+  workflow_dispatch:
+
+jobs:
+  collect-analytics:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Decode YouTube Token
+        env:
+          YOUTUBE_TOKEN_BASE64: ${{ secrets.YOUTUBE_TOKEN_BASE64 }}
+        run: |
+          if [ -n "$YOUTUBE_TOKEN_BASE64" ]; then
+            echo "$YOUTUBE_TOKEN_BASE64" | base64 -d > youtube-token.json
+            echo "✅ youtube-token.json created from secret"
+          else
+            echo "❌ YOUTUBE_TOKEN_BASE64 secret not found"
+            exit 1
+          fi
+
+      - name: Run Analytics Collector
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📊 STARTING ANALYTICS COLLECTION"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Timestamp: $(date)"
+          echo ""
+
+          node agents/agent-9-analytics-collector.js --min-days=1
+
+      - name: Upload Logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: analytics-logs
+          path: logs/
+          retention-days: 7

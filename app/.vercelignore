@@ -1,0 +1,10 @@
+# Vercel Ignore
+.env.local
+.env*.local
+node_modules
+.svelte-kit
+build
+
+# Development
+.DS_Store
+*.log

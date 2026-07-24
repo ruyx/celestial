@@ -1,0 +1,322 @@
+/**
+ * Retea Design System - Typography Tokens
+ * Sistema tipográfico basado en escala modular 1.25 (Major Third)
+ *
+ * Principios:
+ * - Sans-serif moderna para UI (Inter/System Font Stack)
+ * - Jerarquía clara con 6 niveles de headings
+ * - Line-height óptimo para legibilidad (1.5 body, 1.2 headings)
+ * - Letter-spacing ajustado para tamaños grandes
+ */
+
+:root {
+  /* ============================================
+     FONT FAMILIES
+     ============================================ */
+
+  /* Primary font stack (UI/Body) - System fonts para mejor rendimiento */
+  --font-family-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter',
+    'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans',
+    'Helvetica Neue', sans-serif;
+
+  /* Headings - Mismo stack pero diferenciado semánticamente */
+  --font-family-heading: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter',
+    'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans',
+    'Helvetica Neue', sans-serif;
+
+  /* Monospace (código, números de tracking) */
+  --font-family-mono: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
+
+  /* ============================================
+     FONT SIZES - Escala modular 1.25 (Major Third)
+     Base: 16px (1rem)
+     ============================================ */
+
+  --font-size-xs: 0.75rem;     /* 12px - Labels pequeños, badges */
+  --font-size-sm: 0.875rem;    /* 14px - Body small, captions */
+  --font-size-base: 1rem;      /* 16px - Body text por defecto */
+  --font-size-md: 1.125rem;    /* 18px - Body large, leads */
+  --font-size-lg: 1.25rem;     /* 20px - H6, subtítulos */
+  --font-size-xl: 1.5rem;      /* 24px - H5 */
+  --font-size-2xl: 1.875rem;   /* 30px - H4 */
+  --font-size-3xl: 2.25rem;    /* 36px - H3 */
+  --font-size-4xl: 3rem;       /* 48px - H2 */
+  --font-size-5xl: 3.75rem;    /* 60px - H1 */
+  --font-size-6xl: 4.5rem;     /* 72px - Display */
+
+  /* ============================================
+     FONT WEIGHTS
+     ============================================ */
+
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  /* ============================================
+     LINE HEIGHTS
+     ============================================ */
+
+  --line-height-tight: 1.1;    /* Headings grandes */
+  --line-height-snug: 1.2;     /* Headings medianos */
+  --line-height-normal: 1.5;   /* Body text */
+  --line-height-relaxed: 1.625; /* Párrafos largos */
+  --line-height-loose: 2;      /* Espaciado extra */
+
+  /* ============================================
+     LETTER SPACING
+     ============================================ */
+
+  --letter-spacing-tighter: -0.05em;
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.025em;
+  --letter-spacing-wider: 0.05em;
+  --letter-spacing-widest: 0.1em;
+
+  /* ============================================
+     TEXT DECORATION
+     ============================================ */
+
+  --text-underline-offset: 0.2em;
+  --text-decoration-thickness: 2px;
+}
+
+/* ============================================
+   TYPOGRAPHY CLASSES - Aplicación directa
+   ============================================ */
+
+/* Headings */
+.heading-1,
+.h1 {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-5xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--color-text-primary);
+}
+
+.heading-2,
+.h2 {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--color-text-primary);
+}
+
+.heading-3,
+.h3 {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+  letter-spacing: var(--letter-spacing-normal);
+  color: var(--color-text-primary);
+}
+
+.heading-4,
+.h4 {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+  letter-spacing: var(--letter-spacing-normal);
+  color: var(--color-text-primary);
+}
+
+.heading-5,
+.h5 {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--letter-spacing-normal);
+  color: var(--color-text-primary);
+}
+
+.heading-6,
+.h6 {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--letter-spacing-normal);
+  color: var(--color-text-primary);
+}
+
+/* Body text */
+.text-body {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+}
+
+.text-body-large {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-primary);
+}
+
+.text-body-small {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-secondary);
+}
+
+/* Labels & Captions */
+.text-label {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.text-caption {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-tertiary);
+}
+
+/* Monospace */
+.text-mono {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+/* ============================================
+   UTILITY CLASSES - Modificadores
+   ============================================ */
+
+/* Weights */
+.font-light { font-weight: var(--font-weight-light); }
+.font-normal { font-weight: var(--font-weight-normal); }
+.font-medium { font-weight: var(--font-weight-medium); }
+.font-semibold { font-weight: var(--font-weight-semibold); }
+.font-bold { font-weight: var(--font-weight-bold); }
+.font-extrabold { font-weight: var(--font-weight-extrabold); }
+
+/* Colors */
+.text-primary { color: var(--color-text-primary); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-tertiary { color: var(--color-text-tertiary); }
+.text-disabled { color: var(--color-text-disabled); }
+.text-inverse { color: var(--color-text-inverse); }
+.text-brand { color: var(--color-primary); }
+.text-success { color: var(--color-success); }
+.text-warning { color: var(--color-warning); }
+.text-error { color: var(--color-error); }
+
+/* Alignment */
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-justify { text-align: justify; }
+
+/* Transform */
+.text-uppercase { text-transform: uppercase; }
+.text-lowercase { text-transform: lowercase; }
+.text-capitalize { text-transform: capitalize; }
+
+/* Decoration */
+.text-underline {
+  text-decoration: underline;
+  text-underline-offset: var(--text-underline-offset);
+  text-decoration-thickness: var(--text-decoration-thickness);
+}
+.text-line-through { text-decoration: line-through; }
+.text-no-underline { text-decoration: none; }
+
+/* Truncation */
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-ellipsis {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 2 lines */
+.text-ellipsis-2 {
+  -webkit-line-clamp: 2;
+}
+
+/* 3 lines */
+.text-ellipsis-3 {
+  -webkit-line-clamp: 3;
+}
+
+/* ============================================
+   RESPONSIVE TYPOGRAPHY
+   ============================================ */
+
+/* Mobile: reducir tamaños de headings grandes */
+@media (max-width: 640px) {
+  .heading-1,
+  .h1 {
+    font-size: var(--font-size-4xl); /* 48px → 48px en móvil */
+  }
+
+  .heading-2,
+  .h2 {
+    font-size: var(--font-size-3xl); /* 48px → 36px en móvil */
+  }
+
+  .heading-3,
+  .h3 {
+    font-size: var(--font-size-2xl); /* 36px → 30px en móvil */
+  }
+}
+
+/* ============================================
+   USAGE EXAMPLES
+   ============================================ */
+
+/*
+  Page title:
+  <h1 class="heading-1">Dashboard de Campañas</h1>
+
+  Section heading:
+  <h2 class="heading-3">Instalaciones Pendientes</h2>
+
+  Card title:
+  <h3 class="heading-5">Farmacia Central - Madrid</h3>
+
+  Body text:
+  <p class="text-body">La campaña incluye 50 puntos de instalación...</p>
+
+  Label:
+  <label class="text-label">Estado de la campaña</label>
+
+  Caption:
+  <span class="text-caption">Última actualización: hace 5 minutos</span>
+
+  Badge text:
+  <span class="text-caption font-semibold text-uppercase">Pendiente</span>
+
+  Combinación con colores:
+  <p class="text-body text-success">Instalación completada con éxito</p>
+  <span class="text-label text-brand">Nuevo</span>
+*/

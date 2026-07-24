@@ -1,0 +1,224 @@
+/**
+ * Retea Design System - Spacing Tokens
+ * Sistema de espaciado basado en múltiplos de 4px (0.25rem)
+ *
+ * Principios:
+ * - Base 4px para consistencia
+ * - Escala de 0-96 para cubrir todos los casos
+ * - Alias semánticos para componentes específicos
+ */
+
+:root {
+  /* ============================================
+     SPACING SCALE - Base 4px (0.25rem)
+     ============================================ */
+
+  --spacing-0: 0;              /* 0px - Sin espacio */
+  --spacing-px: 1px;           /* 1px - Bordes, divisores finos */
+  --spacing-0-5: 0.125rem;     /* 2px - Espacio mínimo */
+  --spacing-1: 0.25rem;        /* 4px - Padding interno muy pequeño */
+  --spacing-1-5: 0.375rem;     /* 6px - Espacio entre elementos muy cercanos */
+  --spacing-2: 0.5rem;         /* 8px - Padding de badges, chips */
+  --spacing-3: 0.75rem;        /* 12px - Padding de inputs pequeños */
+  --spacing-4: 1rem;           /* 16px - Padding estándar de componentes */
+  --spacing-5: 1.25rem;        /* 20px - Gap entre secciones relacionadas */
+  --spacing-6: 1.5rem;         /* 24px - Padding de cards medianos */
+  --spacing-7: 1.75rem;        /* 28px - Gap entre grupos de contenido */
+  --spacing-8: 2rem;           /* 32px - Padding de contenedores grandes */
+  --spacing-10: 2.5rem;        /* 40px - Margen entre secciones */
+  --spacing-12: 3rem;          /* 48px - Espaciado de layouts */
+  --spacing-14: 3.5rem;        /* 56px - Espaciado extra grande */
+  --spacing-16: 4rem;          /* 64px - Márgenes de página */
+  --spacing-20: 5rem;          /* 80px - Espaciado de secciones landing */
+  --spacing-24: 6rem;          /* 96px - Espaciado hero sections */
+
+  /* ============================================
+     SEMANTIC ALIASES - Componentes específicos
+     ============================================ */
+
+  /* Padding de componentes */
+  --padding-button-sm: var(--spacing-2) var(--spacing-3);        /* 8px 12px */
+  --padding-button-md: var(--spacing-3) var(--spacing-4);        /* 12px 16px */
+  --padding-button-lg: var(--spacing-4) var(--spacing-6);        /* 16px 24px */
+
+  --padding-input-sm: var(--spacing-2) var(--spacing-3);         /* 8px 12px */
+  --padding-input-md: var(--spacing-3) var(--spacing-4);         /* 12px 16px */
+  --padding-input-lg: var(--spacing-4) var(--spacing-5);         /* 16px 20px */
+
+  --padding-card-sm: var(--spacing-4);                           /* 16px */
+  --padding-card-md: var(--spacing-6);                           /* 24px */
+  --padding-card-lg: var(--spacing-8);                           /* 32px */
+
+  --padding-badge: var(--spacing-1) var(--spacing-2);            /* 4px 8px */
+  --padding-chip: var(--spacing-1-5) var(--spacing-3);           /* 6px 12px */
+
+  /* Gap entre elementos */
+  --gap-xs: var(--spacing-1);      /* 4px - Entre iconos y texto */
+  --gap-sm: var(--spacing-2);      /* 8px - Entre elementos relacionados */
+  --gap-md: var(--spacing-4);      /* 16px - Gap estándar en flexbox */
+  --gap-lg: var(--spacing-6);      /* 24px - Entre grupos de elementos */
+  --gap-xl: var(--spacing-8);      /* 32px - Entre secciones */
+
+  /* Margin de secciones */
+  --margin-section-sm: var(--spacing-8);    /* 32px */
+  --margin-section-md: var(--spacing-12);   /* 48px */
+  --margin-section-lg: var(--spacing-16);   /* 64px */
+  --margin-section-xl: var(--spacing-20);   /* 80px */
+
+  /* ============================================
+     BORDER RADIUS
+     ============================================ */
+
+  --radius-none: 0;
+  --radius-xs: 0.125rem;       /* 2px - Inputs pequeños */
+  --radius-sm: 0.25rem;        /* 4px - Badges, chips */
+  --radius-md: 0.5rem;         /* 8px - Buttons, cards pequeños */
+  --radius-lg: 0.75rem;        /* 12px - Cards medianos */
+  --radius-xl: 1rem;           /* 16px - Cards grandes */
+  --radius-2xl: 1.5rem;        /* 24px - Modal, drawer */
+  --radius-3xl: 2rem;          /* 32px - Cards especiales */
+  --radius-full: 9999px;       /* Círculos, pills */
+
+  /* ============================================
+     BORDER WIDTH
+     ============================================ */
+
+  --border-width-0: 0;
+  --border-width-1: 1px;
+  --border-width-2: 2px;
+  --border-width-4: 4px;
+  --border-width-8: 8px;
+
+  /* ============================================
+     Z-INDEX SCALE
+     ============================================ */
+
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1020;
+  --z-index-fixed: 1030;
+  --z-index-modal-backdrop: 1040;
+  --z-index-modal: 1050;
+  --z-index-popover: 1060;
+  --z-index-tooltip: 1070;
+  --z-index-notification: 1080;
+
+  /* ============================================
+     LAYOUT - Container max-widths
+     ============================================ */
+
+  --container-sm: 640px;
+  --container-md: 768px;
+  --container-lg: 1024px;
+  --container-xl: 1280px;
+  --container-2xl: 1536px;
+
+  /* Layout específico de Retea (según PLAN.md) */
+  --sidebar-width: 274px;
+  --header-height: 90px;
+  --content-max-width: var(--container-xl);
+}
+
+/* ============================================
+   UTILITY CLASSES - Spacing helpers
+   ============================================ */
+
+/* Padding */
+.p-0 { padding: var(--spacing-0); }
+.p-1 { padding: var(--spacing-1); }
+.p-2 { padding: var(--spacing-2); }
+.p-3 { padding: var(--spacing-3); }
+.p-4 { padding: var(--spacing-4); }
+.p-5 { padding: var(--spacing-5); }
+.p-6 { padding: var(--spacing-6); }
+.p-8 { padding: var(--spacing-8); }
+.p-10 { padding: var(--spacing-10); }
+.p-12 { padding: var(--spacing-12); }
+.p-16 { padding: var(--spacing-16); }
+
+/* Padding horizontal */
+.px-2 { padding-left: var(--spacing-2); padding-right: var(--spacing-2); }
+.px-3 { padding-left: var(--spacing-3); padding-right: var(--spacing-3); }
+.px-4 { padding-left: var(--spacing-4); padding-right: var(--spacing-4); }
+.px-6 { padding-left: var(--spacing-6); padding-right: var(--spacing-6); }
+.px-8 { padding-left: var(--spacing-8); padding-right: var(--spacing-8); }
+
+/* Padding vertical */
+.py-2 { padding-top: var(--spacing-2); padding-bottom: var(--spacing-2); }
+.py-3 { padding-top: var(--spacing-3); padding-bottom: var(--spacing-3); }
+.py-4 { padding-top: var(--spacing-4); padding-bottom: var(--spacing-4); }
+.py-6 { padding-top: var(--spacing-6); padding-bottom: var(--spacing-6); }
+.py-8 { padding-top: var(--spacing-8); padding-bottom: var(--spacing-8); }
+
+/* Margin */
+.m-0 { margin: var(--spacing-0); }
+.m-1 { margin: var(--spacing-1); }
+.m-2 { margin: var(--spacing-2); }
+.m-3 { margin: var(--spacing-3); }
+.m-4 { margin: var(--spacing-4); }
+.m-6 { margin: var(--spacing-6); }
+.m-8 { margin: var(--spacing-8); }
+.m-auto { margin: auto; }
+
+/* Margin horizontal */
+.mx-auto { margin-left: auto; margin-right: auto; }
+.mx-4 { margin-left: var(--spacing-4); margin-right: var(--spacing-4); }
+.mx-6 { margin-left: var(--spacing-6); margin-right: var(--spacing-6); }
+
+/* Margin vertical */
+.my-4 { margin-top: var(--spacing-4); margin-bottom: var(--spacing-4); }
+.my-6 { margin-top: var(--spacing-6); margin-bottom: var(--spacing-6); }
+.my-8 { margin-top: var(--spacing-8); margin-bottom: var(--spacing-8); }
+
+/* Gap (flexbox/grid) */
+.gap-1 { gap: var(--spacing-1); }
+.gap-2 { gap: var(--spacing-2); }
+.gap-3 { gap: var(--spacing-3); }
+.gap-4 { gap: var(--spacing-4); }
+.gap-6 { gap: var(--spacing-6); }
+.gap-8 { gap: var(--spacing-8); }
+
+/* Border radius */
+.rounded-none { border-radius: var(--radius-none); }
+.rounded-sm { border-radius: var(--radius-sm); }
+.rounded-md { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-xl { border-radius: var(--radius-xl); }
+.rounded-2xl { border-radius: var(--radius-2xl); }
+.rounded-full { border-radius: var(--radius-full); }
+
+/* ============================================
+   USAGE EXAMPLES
+   ============================================ */
+
+/*
+  Button con padding semántico:
+  .btn {
+    padding: var(--padding-button-md);
+    border-radius: var(--radius-md);
+  }
+
+  Card con padding y gap:
+  .card {
+    padding: var(--padding-card-md);
+    gap: var(--gap-md);
+    border-radius: var(--radius-lg);
+  }
+
+  Layout con sidebar:
+  .layout-sidebar {
+    width: var(--sidebar-width);
+    padding: var(--spacing-6);
+  }
+
+  Stack de elementos:
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+  }
+
+  Sección con margen:
+  .section {
+    margin-bottom: var(--margin-section-md);
+  }
+*/

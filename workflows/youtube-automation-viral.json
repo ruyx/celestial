@@ -1,0 +1,227 @@
+{
+  "name": "YouTube VIRAL Production - Master Scriptwriter V2",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "daily-trigger",
+      "name": "Daily Trigger (12:00 PM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// AGENTE 1 VIRAL: GUIONISTA MAESTRO CON TÉCNICAS VIRALES DE YOUTUBE\n// Cuádruple Expertise: SEO + Teología + Copywriting + YouTube Viral\n//\n// Técnicas implementadas:\n// - 3 tipos de hooks (Direct, Controversy, Negative)\n// - Framework Hook-Shock-Validate-Tease\n// - Open loops e information gaps\n// - Storytelling natural (no listado)\n// - CTA ultra corto (máximo 4 líneas)\n// - Tono conversacional extremo\n\nconst fs = require('fs');\nconst path = require('path');\nconst { execSync } = require('child_process');\n\n// Ejecutar el agente maestro VIRAL\ntry {\n  const scriptPath = '/home/suario/ruy-projects/project-yt/agents/agent-1-viral-scriptwriter.js';\n  const output = execSync(`node ${scriptPath}`, { \n    encoding: 'utf-8',\n    cwd: '/home/suario/ruy-projects/project-yt'\n  });\n  \n  // Buscar el archivo JSON generado más reciente\n  const scriptsDir = '/home/suario/ruy-projects/project-yt/output/scripts';\n  const files = fs.readdirSync(scriptsDir)\n    .filter(f => f.startsWith('script-') && f.endsWith('.json'))\n    .map(f => ({\n      name: f,\n      time: fs.statSync(path.join(scriptsDir, f)).mtime.getTime()\n    }))\n    .sort((a, b) => b.time - a.time);\n  \n  if (files.length === 0) {\n    throw new Error('No se generó ningún guión');\n  }\n  \n  // Leer el guión más reciente\n  const latestScript = files[0].name;\n  const scriptContent = JSON.parse(\n    fs.readFileSync(path.join(scriptsDir, latestScript), 'utf-8')\n  );\n  \n  return {\n    success: true,\n    scriptFile: latestScript,\n    scriptData: scriptContent,\n    verse: scriptContent.metadata.verse,\n    category: scriptContent.metadata.category,\n    hookType: scriptContent.metadata.hookType,\n    emotionalBenefit: scriptContent.metadata.emotionalBenefit,\n    output: output\n  };\n  \n} catch (error) {\n  return { \n    success: false, \n    error: error.message,\n    stack: error.stack\n  };\n}"
+      },
+      "id": "ai-viral-scriptwriter",
+      "name": "AI VIRAL Master Scriptwriter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.success }}",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "id": "check-script-success",
+      "name": "Script Generated?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "Script generation failed"
+            },
+            {
+              "name": "error",
+              "value": "={{ $json.error }}"
+            }
+          ]
+        }
+      },
+      "id": "script-error-log",
+      "name": "Log Script Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "VIRAL script generated successfully"
+            },
+            {
+              "name": "verse",
+              "value": "={{ $json.verse }}"
+            },
+            {
+              "name": "hookType",
+              "value": "={{ $json.hookType }}"
+            },
+            {
+              "name": "emotionalBenefit",
+              "value": "={{ $json.emotionalBenefit }}"
+            },
+            {
+              "name": "scriptFile",
+              "value": "={{ $json.scriptFile }}"
+            }
+          ]
+        }
+      },
+      "id": "script-success-log",
+      "name": "Log VIRAL Script Success",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// AGENTE 2-7: PRODUCCIÓN DE VIDEO\n// Este nodo ejecuta la pipeline completa de producción\n\nconst { execSync } = require('child_process');\n\ntry {\n  const scriptFile = $input.first().json.scriptFile;\n  \n  // Ejecutar pipeline de producción con el guión generado\n  const output = execSync(\n    `cd /home/suario/ruy-projects/project-yt && node production-pipeline.js produce --script=${scriptFile}`,\n    { encoding: 'utf-8' }\n  );\n  \n  return { \n    success: true, \n    output: output,\n    scriptFile: scriptFile\n  };\n  \n} catch (error) {\n  return { \n    success: false, \n    error: error.message \n  };\n}"
+      },
+      "id": "run-production",
+      "name": "Run Video Production",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.success }}",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "id": "check-production-success",
+      "name": "Production Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "Video produced successfully"
+            },
+            {
+              "name": "scriptFile",
+              "value": "={{ $json.scriptFile }}"
+            }
+          ]
+        }
+      },
+      "id": "production-success-log",
+      "name": "Log Production Success",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [1450, 100]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "Production failed"
+            }
+          ]
+        }
+      },
+      "id": "production-error-log",
+      "name": "Log Production Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "amount": 24,
+        "unit": "hours"
+      },
+      "id": "wait-analytics",
+      "name": "Wait 24h for Analytics",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1650, 100]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// AGENTE 8: ANALYTICS MONITOR\n// Recolecta métricas y actualiza feedback para mejorar próximos guiones\n\nconst { execSync } = require('child_process');\n\ntry {\n  const output = execSync(\n    'cd /home/suario/ruy-projects/project-yt && node agents/analytics-monitor.js', \n    { encoding: 'utf-8' }\n  );\n  return { success: true, output };\n} catch (error) {\n  return { success: false, error: error.message };\n}"
+      },
+      "id": "collect-analytics",
+      "name": "Collect Analytics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1850, 100]
+    }
+  ],
+  "connections": {
+    "Daily Trigger (12:00 PM)": {
+      "main": [[{ "node": "AI VIRAL Master Scriptwriter", "type": "main", "index": 0 }]]
+    },
+    "AI VIRAL Master Scriptwriter": {
+      "main": [[{ "node": "Script Generated?", "type": "main", "index": 0 }]]
+    },
+    "Script Generated?": {
+      "main": [
+        [{ "node": "Log VIRAL Script Success", "type": "main", "index": 0 }],
+        [{ "node": "Log Script Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Log VIRAL Script Success": {
+      "main": [[{ "node": "Run Video Production", "type": "main", "index": 0 }]]
+    },
+    "Run Video Production": {
+      "main": [[{ "node": "Production Success?", "type": "main", "index": 0 }]]
+    },
+    "Production Success?": {
+      "main": [
+        [{ "node": "Log Production Success", "type": "main", "index": 0 }],
+        [{ "node": "Log Production Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Log Production Success": {
+      "main": [[{ "node": "Wait 24h for Analytics", "type": "main", "index": 0 }]]
+    },
+    "Wait 24h for Analytics": {
+      "main": [[{ "node": "Collect Analytics", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

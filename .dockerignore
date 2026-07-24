@@ -1,0 +1,70 @@
+# ============================================================================
+# .dockerignore - Excluir archivos del contexto de Docker
+# ============================================================================
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# Logs
+logs/
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Documentation (no necesaria en runtime)
+docs/
+*.md
+README.md
+
+# Output generado (ya está en volumes)
+output/
+data/processed-verses.json
+
+# Archivos temporales
+tmp/
+temp/
+*.tmp
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Scripts de desarrollo
+scripts/test-*.js
+scripts/debug-*.js
+
+# Coverage y tests
+coverage/
+.nyc_output/
+test/
+__tests__/
+
+# Archivos de configuración no necesarios en runtime
+.eslintrc*
+.prettierrc*
+.editorconfig
+tsconfig.json

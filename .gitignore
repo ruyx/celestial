@@ -1,0 +1,89 @@
+# ============================================================================
+# .gitignore - Excluir archivos sensibles y temporales de Git
+# ============================================================================
+
+# SECRETS - NUNCA commitear
+.env
+.env.local
+.env.*.local
+youtube-token.json
+youtube-token.b64
+youtube-credentials.json
+client_secret*.json
+refresh-youtube-token.js
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+*.Zone.Identifier
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Output generado (videos, metadata, etc.)
+output/
+data/processed-verses.json
+data/videos/
+data/thumbnails/
+data/audio/
+audio-narration-*.mp3
+*.mp4
+*.mp3
+
+# Archivos temporales
+tmp/
+temp/
+*.tmp
+
+# FFmpeg static (no necesario en repo)
+ffmpeg-*/
+
+# Coverage y tests
+coverage/
+.nyc_output/
+test/
+__tests__/
+
+# Archivos de configuración local
+.agents/
+skills-lock.json
+
+# Archivos de documentación temporal
+PIPELINE_SUMMARY_*.md
+COPY_PASTE_READY.txt
+outh sp vr/
+
+# Branding assets (ya están en el repo, no duplicar)
+thumb/
+palette-color.svg*
+
+# Workflows experimentales
+n8n-workflow*.json
+integration-test.js
+optimized-channel-setup.js
+complete-channel-setup.js
+setup-channel.js
+upload-to-youtube.js
+compose-thumbnail.js
+production-pipeline.js
+video-production-*.js
+test-*.md
+juan-*.mp4
+
+# Playlist IDs (no versionarlos)
+playlist-ids.json

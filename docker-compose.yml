@@ -1,0 +1,108 @@
+# ============================================================================
+# DOCKER COMPOSE: Rey Celestial - YouTube Bible Automation
+# ============================================================================
+# Orquestación de servicios para desarrollo y producción
+# ============================================================================
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # APP: Main Application
+  # ==========================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: rey-celestial:latest
+    container_name: rey-celestial-app
+    restart: unless-stopped
+
+    environment:
+      - NODE_ENV=production
+      - TZ=Europe/Madrid
+
+    env_file:
+      - .env
+
+    volumes:
+      # Persistir datos generados
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./output:/app/output
+
+      # Montar credenciales de YouTube (OAuth token)
+      - ./youtube-token.json:/app/youtube-token.json:ro
+      - ./youtube-credentials.json:/app/youtube-credentials.json:ro
+
+    networks:
+      - rey-celestial-network
+
+    # Healthcheck
+    healthcheck:
+      test: ["CMD", "node", "-e", "console.log('healthy')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Limitar recursos
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # ==========================================================================
+  # AGENT-9-ANALYTICS: Weekly Analytics Collector
+  # ==========================================================================
+  analytics-collector:
+    image: rey-celestial:latest
+    container_name: rey-celestial-analytics
+    restart: "no"  # Se ejecuta via cron/scheduler externo
+
+    environment:
+      - NODE_ENV=production
+      - TZ=Europe/Madrid
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./youtube-token.json:/app/youtube-token.json:ro
+      - ./youtube-credentials.json:/app/youtube-credentials.json:ro
+
+    networks:
+      - rey-celestial-network
+
+    # Ejecutar Agent 9
+    command: ["node", "agents/agent-9-analytics-collector.js", "--min-days=1"]
+
+    depends_on:
+      - app
+
+# ==========================================================================
+# NETWORKS
+# ==========================================================================
+networks:
+  rey-celestial-network:
+    driver: bridge
+    name: rey-celestial-net
+
+# ==========================================================================
+# VOLUMES (Opcional - para producción)
+# ==========================================================================
+# Si se desea usar volumes gestionados por Docker en lugar de bind mounts:
+# volumes:
+#   data:
+#     driver: local
+#   logs:
+#     driver: local
+#   output:
+#     driver: local
