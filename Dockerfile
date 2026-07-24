@@ -14,8 +14,8 @@ WORKDIR /app
 # Copiar package files
 COPY package*.json ./
 
-# Instalar dependencias (incluye dev para builds si es necesario)
-RUN npm ci
+# Instalar dependencias (npm install porque package-lock.json está en .gitignore)
+RUN npm install
 
 # Copiar código fuente
 COPY . .
