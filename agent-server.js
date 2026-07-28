@@ -63,9 +63,9 @@ app.post('/agent-0', async (req, res) => {
 
     res.json({
       success: true,
-      verse: decision.selectedVerse.reference,
-      category: decision.selectedVerse.category,
-      metadata: decision.metadata,
+      verse: decision.reference,
+      category: decision.category,
+      metadata: decision,
       agent0Decision: decision
     });
   } catch (error) {
