@@ -215,9 +215,12 @@ app.post('/agent-2', async (req, res) => {
       console.log('✅ Created scripts directory');
     }
 
-    const tempScriptPath = path.join(scriptsDir, `script-${script.verse_reference.replace(/[:\s]/g, '-')}.json`);
+    // Use a simple timestamp-based filename to avoid special characters issues
+    const timestamp = Date.now();
+    const tempScriptPath = path.join(scriptsDir, `script-${scriptId}-${timestamp}.json`);
     fs.writeFileSync(tempScriptPath, JSON.stringify(script, null, 2));
     console.log(`✅ Script saved to: ${tempScriptPath}`);
+    console.log(`📁 Files in scripts dir: ${fs.readdirSync(scriptsDir).join(', ')}`);
 
     // Execute agent-2
     const result = execSync(
