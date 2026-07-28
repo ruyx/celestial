@@ -304,10 +304,10 @@ app.post('/guardian-images', async (req, res) => {
   console.log(`\n👼 Executing Guardian Images + Agent 4 for: ${verse}`);
 
   try {
-    // Paso 1: Ejecutar Agent 4 para generar las imágenes
-    console.log('🎨 Step 1/2: Running Agent 4 (Magnific MCP) to generate images...');
+    // Paso 1: Ejecutar Agent 4 para generar las imágenes (REST API version)
+    console.log('🎨 Step 1/2: Running Agent 4 (Magnific REST API) to generate images...');
     const agent4Result = execSync(
-      `node agents/agent-4-magnific-mcp.js "${verse}"`,
+      `node agents/agent-4-magnific-api.js "${verse}"`,
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 15 * 60 * 1000, cwd: BASE_DIR }
     );
     console.log(agent4Result);
