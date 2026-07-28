@@ -304,19 +304,19 @@ app.post('/guardian-images', async (req, res) => {
   console.log(`\n👼 Executing Guardian Images + Agent 4 for: ${verse}`);
 
   try {
-    // Paso 1: Ejecutar Agent 4 para generar las imágenes (REST API version)
-    console.log('🎨 Step 1/2: Running Agent 4 (Magnific REST API) to generate images...');
+    // Paso 1: Ejecutar Agent 4 para generar las imágenes (MCP en servidor xprinta)
+    console.log('🎨 Step 1/2: Running Agent 4 (Magnific MCP) via SSH to xprinta server...');
     const agent4Result = execSync(
-      `node agents/agent-4-magnific-api.js "${verse}"`,
-      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 15 * 60 * 1000, cwd: BASE_DIR }
+      `ssh -o BatchMode=yes -o ConnectTimeout=10 xprinta 'cd ~/project-yt && ~/.local/bin/claude run agents/agent-4-magnific-mcp.js "${verse}"'`,
+      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 15 * 60 * 1000 }
     );
     console.log(agent4Result);
 
-    // Paso 2: Ejecutar Guardian para validar las imágenes
+    // Paso 2: Ejecutar Guardian para validar las imágenes (también en xprinta donde están los archivos)
     console.log('\n👼 Step 2/2: Running Guardian to validate images...');
     const guardianResult = execSync(
-      `node agents/guardian-images.js "${verse}"`,
-      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 15 * 60 * 1000, cwd: BASE_DIR }
+      `ssh -o BatchMode=yes -o ConnectTimeout=10 xprinta 'cd ~/project-yt && node agents/guardian-images.js "${verse}"'`,
+      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 15 * 60 * 1000 }
     );
     console.log(guardianResult);
 
