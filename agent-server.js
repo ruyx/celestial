@@ -32,6 +32,28 @@ console.log('🔍 PORT detected:', PORT);
 const BASE_DIR = process.cwd();
 console.log('🔍 BASE_DIR:', BASE_DIR);
 
+// Create output directories if they don't exist (needed for Render)
+console.log('🔍 Creating output directories...');
+const outputDirs = [
+  'output',
+  'output/scripts',
+  'output/image-prompts',
+  'output/image-batches',
+  'output/videos',
+  'output/final-videos',
+  'output/youtube-metadata',
+  'output/video-metadata'
+];
+
+outputDirs.forEach(dir => {
+  const fullPath = path.join(BASE_DIR, dir);
+  if (!fs.existsSync(fullPath)) {
+    fs.mkdirSync(fullPath, { recursive: true });
+    console.log(`✅ Created: ${dir}`);
+  }
+});
+console.log('✅ Output directories ready');
+
 console.log('🔍 Setting up middleware...');
 app.use(express.json());
 
