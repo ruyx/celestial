@@ -39,6 +39,7 @@ const outputDirs = [
   'output/scripts',
   'output/image-prompts',
   'output/image-batches',
+  'output/image-metadata',
   'output/videos',
   'output/final-videos',
   'output/youtube-metadata',
