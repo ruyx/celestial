@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: agent-server
+    runtime: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install
+    startCommand: node agent-server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AGENT_SERVER_PORT
+        sync: false
