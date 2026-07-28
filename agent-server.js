@@ -178,6 +178,40 @@ app.post('/agent-2', async (req, res) => {
   console.log('\n🎨 Executing Agent 2: Visual Designer PRO');
 
   try {
+    // Get scriptId from Agent 1 output (passed via n8n)
+    const { scriptId } = req.body;
+
+    if (!scriptId) {
+      throw new Error('scriptId is required');
+    }
+
+    // Fetch script from Supabase
+    const { createClient } = require('@supabase/supabase-js');
+    const ws = require('ws');
+
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      realtime: { transport: ws }
+    });
+
+    const { data: script, error } = await supabase
+      .from('generated_scripts')
+      .select('*')
+      .eq('id', scriptId)
+      .single();
+
+    if (error) throw error;
+    if (!script) throw new Error(`Script ${scriptId} not found`);
+
+    // Save script temporarily for agent-2 to read
+    const scriptsDir = path.join(BASE_DIR, 'output/scripts');
+    const tempScriptPath = path.join(scriptsDir, `script-${script.verse_reference.replace(/[:\s]/g, '-')}.json`);
+    fs.writeFileSync(tempScriptPath, JSON.stringify(script, null, 2));
+
+    // Execute agent-2
     const result = execSync(
       'node agents/agent-2-image-designer-pro.js',
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, cwd: BASE_DIR }
