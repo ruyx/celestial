@@ -208,8 +208,16 @@ app.post('/agent-2', async (req, res) => {
 
     // Save script temporarily for agent-2 to read
     const scriptsDir = path.join(BASE_DIR, 'output/scripts');
+
+    // Ensure directory exists (in case Render has ephemeral filesystem)
+    if (!fs.existsSync(scriptsDir)) {
+      fs.mkdirSync(scriptsDir, { recursive: true });
+      console.log('✅ Created scripts directory');
+    }
+
     const tempScriptPath = path.join(scriptsDir, `script-${script.verse_reference.replace(/[:\s]/g, '-')}.json`);
     fs.writeFileSync(tempScriptPath, JSON.stringify(script, null, 2));
+    console.log(`✅ Script saved to: ${tempScriptPath}`);
 
     // Execute agent-2
     const result = execSync(
