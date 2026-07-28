@@ -39,6 +39,7 @@ RUN apk add --no-cache \
     curl \
     bash \
     tzdata \
+    openssh-client \
     && rm -rf /var/cache/apk/*
 
 # Crear usuario no-root
@@ -64,12 +65,12 @@ RUN mkdir -p \
 # Cambiar a usuario no-root
 USER nodejs
 
-# Exponer puerto (si se necesita API en el futuro)
-EXPOSE 3000
+# Exponer puerto para agent-server
+EXPOSE 10000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD node -e "console.log('healthy')" || exit 1
 
-# Comando por defecto (puede ser sobrescrito en docker-compose)
-CMD ["node", "--version"]
+# Comando por defecto: configura SSH y arranca el servidor
+CMD ["bash", "start-server.sh"]
