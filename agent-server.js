@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+console.log('🔍 Starting agent-server.js...');
+console.log('🔍 Node version:', process.version);
+console.log('🔍 Working directory:', process.cwd());
+
 /**
  * 🚀 AGENT SERVER
  * HTTP server para ejecutar agentes desde n8n sin child_process
@@ -9,19 +13,26 @@
  */
 
 // Load environment variables (Render uses dashboard, but this handles local .env too)
+console.log('🔍 Loading dotenv...');
 require('dotenv').config();
 
+console.log('🔍 Loading dependencies...');
 const express = require('express');
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+console.log('🔍 Dependencies loaded successfully');
 
+console.log('🔍 Initializing Express app...');
 const app = express();
 const PORT = process.env.PORT || process.env.AGENT_SERVER_PORT || 3100;
+console.log('🔍 PORT detected:', PORT);
 
 // Base directory - works both locally and on Railway
 const BASE_DIR = process.cwd();
+console.log('🔍 BASE_DIR:', BASE_DIR);
 
+console.log('🔍 Setting up middleware...');
 app.use(express.json());
 
 // Logging
