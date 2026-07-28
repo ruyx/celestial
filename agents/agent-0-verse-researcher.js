@@ -24,6 +24,7 @@
 const fs = require('fs');
 const path = require('path');
 const { Anthropic } = require('@anthropic-ai/sdk');
+const { saveAgentDecision } = require('../lib/supabase-client');
 
 // 🗄️ BASE DE DATOS TEMPORAL (MVP)
 // En producción, esto será reemplazado por SQLite con 31,102 versículos
@@ -206,6 +207,21 @@ class VerseResearcher {
   }
 
   /**
+   * 🔍 BUSCAR VERSÍCULO POR REFERENCIA
+   * Usado para testing determinista con versículo específico
+   */
+  findVerseByReference(reference) {
+    const verse = TEMP_VERSE_DATABASE.find(v => v.reference === reference);
+
+    if (!verse) {
+      throw new Error(`❌ Versículo "${reference}" no encontrado en la base de datos`);
+    }
+
+    console.log(`✅ Versículo encontrado para testing: ${verse.reference}`);
+    return verse;
+  }
+
+  /**
    * 🎯 SELECCIÓN INTELIGENTE DE VERSÍCULO
    *
    * Algoritmo MVP:
@@ -230,11 +246,11 @@ class VerseResearcher {
       // Si nunca se ha usado, está disponible
       if (!tracking.lastUsed) return true;
 
-      // Verificar si han pasado al menos 7 días desde el último uso
+      // Verificar si han pasado al menos 2 días desde el último uso
       const lastUsedDate = new Date(tracking.lastUsed);
       const daysSinceLastUse = (now - lastUsedDate) / (1000 * 60 * 60 * 24);
 
-      return daysSinceLastUse >= 7;
+      return daysSinceLastUse >= 2;
     });
 
     if (availableVerses.length === 0) {
@@ -374,12 +390,14 @@ Responde SOLO con JSON válido, sin markdown, sin explicaciones adicionales.`;
    * 🚀 EJECUTAR INVESTIGACIÓN COMPLETA
    *
    * Flujo completo:
-   * 1. Seleccionar versículo óptimo
+   * 1. Seleccionar versículo óptimo (o usar targetVerse para testing)
    * 2. Generar metadata personalizada con IA
    * 3. Guardar decisión en JSON
    * 4. Actualizar tracking de uso
+   *
+   * @param {string} targetVerse - Opcional: versículo específico para testing determinista
    */
-  async run() {
+  async run(targetVerse = null) {
     console.log('\n🔬 ============================================');
     console.log('   AGENT 0: INVESTIGADOR DE VERSÍCULOS');
     console.log('   Cerebro del sistema - Decide TODO primero');
@@ -387,7 +405,17 @@ Responde SOLO con JSON válido, sin markdown, sin explicaciones adicionales.`;
 
     try {
       // 1. Seleccionar versículo
-      const selectedVerse = this.selectOptimalVerse();
+      // Testing mode: usa versículo específico
+      // Production mode: selección algorítmica autónoma
+      const selectedVerse = targetVerse
+        ? this.findVerseByReference(targetVerse)
+        : this.selectOptimalVerse();
+
+      if (targetVerse) {
+        console.log(`🧪 MODO TESTING: Usando versículo especificado "${targetVerse}"`);
+      } else {
+        console.log(`🚀 MODO PRODUCCIÓN: Selección algorítmica autónoma`);
+      }
 
       // 2. Generar metadata personalizada con IA
       const aiMetadata = await this.generatePersonalizedMetadata(selectedVerse);
@@ -431,6 +459,15 @@ Responde SOLO con JSON válido, sin markdown, sin explicaciones adicionales.`;
 
       console.log(`\n💾 Decisión guardada en: ${this.decisionFile}`);
 
+      // 4b. Guardar también en Supabase Database
+      try {
+        const savedDecision = await saveAgentDecision(decision);
+        console.log(`✅ Decisión también guardada en Supabase (ID: ${savedDecision.id})`);
+      } catch (error) {
+        console.error('⚠️  Error guardando en Supabase:', error.message);
+        console.log('   (Continuando con decisión en filesystem)');
+      }
+
       // 5. Actualizar tracking de uso
       this.usageTracking[selectedVerse.reference].usedCount++;
       this.usageTracking[selectedVerse.reference].lastUsed = new Date().toISOString();
@@ -459,8 +496,13 @@ Responde SOLO con JSON válido, sin markdown, sin explicaciones adicionales.`;
 
 // 🏃 EJECUCIÓN
 if (require.main === module) {
+  // Leer versículo opcional de argumentos (para testing)
+  // Producción: node agent-0-verse-researcher.js
+  // Testing: node agent-0-verse-researcher.js "Romanos 8:28"
+  const targetVerse = process.argv[2];
+
   const researcher = new VerseResearcher();
-  researcher.run();
+  researcher.run(targetVerse);
 }
 
 module.exports = VerseResearcher;
