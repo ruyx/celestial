@@ -83,6 +83,7 @@ app.post('/agent-1', async (req, res) => {
 
   try {
     const { createClient } = require('@supabase/supabase-js');
+    const ws = require('ws');
 
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -92,7 +93,8 @@ app.post('/agent-1', async (req, res) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
+      auth: { autoRefreshToken: false, persistSession: false },
+      realtime: { transport: ws }
     });
 
     const { data: script, error } = await supabase
