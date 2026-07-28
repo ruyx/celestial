@@ -1,0 +1,26 @@
+# Exclude unnecessary files for agent-server deployment
+# Keep: agent-server.js, agents/, package.json, railway.json
+
+# Exclude outputs (generated at runtime)
+output/
+
+# Exclude non-essential directories
+scripts/
+vercel-functions/
+supabase/
+n8n-workflow/
+docs/
+
+# Exclude git and build artifacts
+.git/
+node_modules/
+
+# Exclude logs and docs
+*.log
+*.md
+!README.md
+
+# Exclude env files (use Railway dashboard for secrets)
+.env*
+!.env.example
+youtube-token.json
