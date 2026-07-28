@@ -8,6 +8,9 @@
  * se ejecutan a través de este servidor HTTP local.
  */
 
+// Load environment variables (Render uses dashboard, but this handles local .env too)
+require('dotenv').config();
+
 const express = require('express');
 const { execSync } = require('child_process');
 const fs = require('fs');
@@ -448,10 +451,32 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log('🚀 Agent Server running');
-  console.log(`📡 Port: ${PORT}`);
-  console.log(`🔗 Base URL: http://localhost:${PORT}`);
-  console.log('\n✅ Ready to receive n8n requests\n');
+// Global error handlers
+process.on('uncaughtException', (err) => {
+  console.error('💥 UNCAUGHT EXCEPTION:', err);
+  process.exit(1);
 });
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 UNHANDLED REJECTION at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+// Start server with error handling
+try {
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log('🚀 Agent Server running');
+    console.log(`📡 Port: ${PORT}`);
+    console.log(`🔗 Base URL: http://localhost:${PORT}`);
+    console.log(`📂 BASE_DIR: ${BASE_DIR}`);
+    console.log('\n✅ Ready to receive n8n requests\n');
+  });
+
+  server.on('error', (err) => {
+    console.error('❌ Server failed to start:', err);
+    process.exit(1);
+  });
+} catch (err) {
+  console.error('❌ Fatal error starting server:', err);
+  process.exit(1);
+}
