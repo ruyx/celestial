@@ -81,6 +81,127 @@ app.get('/debug-env', (req, res) => {
   });
 });
 
+// Guardian Deduplication INTELIGENTE con Auto-Loop (en el servidor)
+// ARQUITECTURA:
+// 1. Guardian: Solo verifica duplicados (sin llamadas HTTP)
+// 2. Agent-server: Maneja el auto-loop llamando a Agent 0
+// 3. Agent 0: Selecciona versículos de su base de datos
+//
+// Filosofía: 0 bloqueos estáticos, proceso autosuficiente
+app.post('/guardian/deduplication', async (req, res) => {
+  const initialVerse = req.body?.verse || 'Juan 3:16'; // Default si no viene
+  const MAX_ATTEMPTS = 10;
+
+  console.log(`\n👼 Guardian Deduplicación Inteligente (Auto-Loop en servidor)`);
+  console.log(`📖 Versículo inicial: "${initialVerse}"`);
+
+  const checkedVerses = [];
+  let currentVerse = initialVerse;
+  let attempts = 0;
+
+  while (attempts < MAX_ATTEMPTS) {
+    attempts++;
+    console.log(`\n🔄 Intento ${attempts}/${MAX_ATTEMPTS}: Verificando "${currentVerse}"...`);
+
+    try {
+      // Paso 1: Llamar al Guardian para verificar duplicado
+      const guardianOutput = execSync(
+        `node agents/guardian-deduplication.js "${currentVerse}"`,
+        { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, cwd: BASE_DIR }
+      );
+
+      console.log(guardianOutput);
+
+      // Parsear resultado del Guardian
+      const jsonMatch = guardianOutput.match(/\{[\s\S]*"isDuplicate"[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('Guardian no devolvió JSON válido');
+      }
+
+      const guardianResult = JSON.parse(jsonMatch[0]);
+
+      // Paso 2: Si no es duplicado, ÉXITO
+      if (!guardianResult.isDuplicate) {
+        console.log(`\n✅ VERSÍCULO ÚNICO ENCONTRADO: "${currentVerse}"`);
+        console.log(`📊 Intentos necesarios: ${attempts}`);
+        console.log(`📝 Versículos probados: ${checkedVerses.join(', ')}`);
+
+        return res.json({
+          success: true,
+          isDuplicate: false,
+          verse: currentVerse,
+          originalVerse: initialVerse,
+          wasReplaced: currentVerse !== initialVerse,
+          attempts: attempts,
+          checkedVerses: checkedVerses,
+          message: currentVerse !== initialVerse
+            ? `Versículo original "${initialVerse}" duplicado, reemplazado por "${currentVerse}"`
+            : `Versículo "${currentVerse}" es único - puede continuar`
+        });
+      }
+
+      // Paso 3: Duplicado detectado
+      console.log(`❌ DUPLICADO DETECTADO: "${currentVerse}" ya fue publicado`);
+      checkedVerses.push(currentVerse);
+
+      if (attempts >= MAX_ATTEMPTS) {
+        throw new Error(`No se pudo encontrar versículo único después de ${MAX_ATTEMPTS} intentos`);
+      }
+
+      // Paso 4: Llamar a Agent 0 para generar nuevo versículo
+      console.log(`\n🔬 Consultando Agent 0 (experto en versículos) para generar alternativa...`);
+      const agent0Output = execSync(
+        `node agents/agent-0-verse-researcher.js`,
+        { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, cwd: BASE_DIR }
+      );
+
+      console.log(agent0Output);
+
+      // Parsear decisión de Agent 0
+      const decisionPath = path.join(BASE_DIR, 'output/agent-0-decision.json');
+      if (!fs.existsSync(decisionPath)) {
+        throw new Error('Agent 0 no generó archivo de decisión');
+      }
+
+      const decision = JSON.parse(fs.readFileSync(decisionPath, 'utf-8'));
+      const newVerse = decision.reference;
+
+      if (!newVerse) {
+        throw new Error('Agent 0 no devolvió un versículo válido');
+      }
+
+      if (checkedVerses.includes(newVerse)) {
+        console.log(`⚠️  Agent 0 generó un versículo ya probado: "${newVerse}"`);
+        console.log(`🔄 Reintentando con Agent 0...`);
+        continue;
+      }
+
+      currentVerse = newVerse;
+      console.log(`🎯 Nuevo versículo candidato: "${currentVerse}"`);
+
+    } catch (error) {
+      console.error(`\n❌ Error en auto-loop:`, error.message);
+      return res.status(500).json({
+        success: false,
+        isDuplicate: null,
+        error: error.message,
+        verse: initialVerse,
+        attempts: attempts,
+        checkedVerses: checkedVerses
+      });
+    }
+  }
+
+  // No debería llegar aquí, pero por seguridad
+  return res.status(500).json({
+    success: false,
+    error: `No se pudo encontrar versículo único después de ${MAX_ATTEMPTS} intentos`,
+    verse: initialVerse,
+    attempts: MAX_ATTEMPTS,
+    checkedVerses: checkedVerses
+  });
+});
+
 // Agent 0: Verse Researcher
 app.post('/agent-0', async (req, res) => {
   console.log('\n🔬 Executing Agent 0: Verse Researcher');
@@ -179,14 +300,8 @@ app.post('/agent-2', async (req, res) => {
   console.log('\n🎨 Executing Agent 2: Visual Designer PRO');
 
   try {
-    // Get scriptId from Agent 1 output (passed via n8n)
-    const { scriptId } = req.body;
-
-    if (!scriptId) {
-      throw new Error('scriptId is required');
-    }
-
-    // Fetch script from Supabase
+    // SOLUCIÓN FINAL: Leer el último script desde Supabase (Agent 1 ya lo guardó)
+    // Esto elimina la dependencia de n8n para pasar parámetros
     const { createClient } = require('@supabase/supabase-js');
     const ws = require('ws');
 
@@ -198,14 +313,19 @@ app.post('/agent-2', async (req, res) => {
       realtime: { transport: ws }
     });
 
-    const { data: script, error } = await supabase
+    // Obtener el script más reciente (Agent 1 acaba de crearlo)
+    const { data: scripts, error } = await supabase
       .from('generated_scripts')
       .select('*')
-      .eq('id', scriptId)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1);
 
     if (error) throw error;
-    if (!script) throw new Error(`Script ${scriptId} not found`);
+    if (!scripts || scripts.length === 0) throw new Error('No hay scripts disponibles');
+
+    const script = scripts[0];
+    const scriptId = script.id;
+    console.log(`✅ Script recuperado desde Supabase: ID ${scriptId}, verso ${script.verse_reference}`);
 
     // Save script temporarily for agent-2 to read
     const scriptsDir = path.join(BASE_DIR, 'output/scripts');
@@ -299,24 +419,41 @@ app.post('/agent-3', async (req, res) => {
 
 // Guardian Images + Agent 4
 app.post('/guardian-images', async (req, res) => {
-  const { verse } = req.body;
+  let verse; // Declarar fuera del try para que esté disponible en el catch
+  try {
+    // Leer último script desde Supabase
+    const { createClient } = require('@supabase/supabase-js');
+    const ws = require('ws');
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      realtime: { transport: ws }
+    });
+
+    const { data: scripts } = await supabase
+      .from('generated_scripts')
+      .select('verse_reference')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    verse = scripts?.[0]?.verse_reference || req.body?.verse;
+    if (!verse) throw new Error('No verse found');
 
   console.log(`\n👼 Executing Guardian Images + Agent 4 for: ${verse}`);
 
-  try {
-    // Paso 1: Ejecutar Agent 4 para generar las imágenes (MCP en servidor xprinta)
-    console.log('🎨 Step 1/2: Running Agent 4 (Magnific MCP) via SSH to xprinta server...');
+    // Paso 1: Ejecutar Agent 4 para generar las imágenes (Magnific MCP)
+    // Ejecutamos directamente sin SSH para evitar bloqueos de Claude Code
+    console.log('🎨 Step 1/2: Running Agent 4 (Magnific MCP) directly...');
     const agent4Result = execSync(
-      `ssh -o BatchMode=yes -o ConnectTimeout=10 xprinta 'cd ~/project-yt && ~/.local/bin/claude run agents/agent-4-magnific-mcp.js "${verse}"'`,
-      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 15 * 60 * 1000 }
+      `bash run-agent-4.sh`,
+      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 15 * 60 * 1000, cwd: BASE_DIR }
     );
     console.log(agent4Result);
 
-    // Paso 2: Ejecutar Guardian para validar las imágenes (también en xprinta donde están los archivos)
+    // Paso 2: Ejecutar Guardian para validar las imágenes
     console.log('\n👼 Step 2/2: Running Guardian to validate images...');
     const guardianResult = execSync(
-      `ssh -o BatchMode=yes -o ConnectTimeout=10 xprinta 'cd ~/project-yt && node agents/guardian-images.js "${verse}"'`,
-      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 15 * 60 * 1000 }
+      `node agents/guardian-images.js "${verse}"`,
+      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 15 * 60 * 1000, cwd: BASE_DIR }
     );
     console.log(guardianResult);
 
@@ -338,11 +475,27 @@ app.post('/guardian-images', async (req, res) => {
 
 // Guardian Videos + Agent 5
 app.post('/guardian-videos', async (req, res) => {
-  const { verse } = req.body;
-
-  console.log(`\n👼 Executing Guardian Videos + Agent 5 for: ${verse}`);
-
+  let verse; // Declarar fuera del try para que esté disponible en el catch
   try {
+    // Leer último script desde Supabase
+    const { createClient } = require('@supabase/supabase-js');
+    const ws = require('ws');
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      realtime: { transport: ws }
+    });
+
+    const { data: scripts } = await supabase
+      .from('generated_scripts')
+      .select('verse_reference')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    verse = scripts?.[0]?.verse_reference || req.body?.verse;
+    if (!verse) throw new Error('No verse found');
+
+    console.log(`\n👼 Executing Guardian Videos + Agent 5 for: ${verse}`);
+
     const result = execSync(
       `node agents/guardian-videos.js "${verse}"`,
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 20 * 60 * 1000, cwd: BASE_DIR }
@@ -359,7 +512,7 @@ app.post('/guardian-videos', async (req, res) => {
     console.error('❌ Guardian Videos error:', error.message);
     res.status(500).json({
       success: false,
-      verse,
+      verse: error.message,
       guardianVideosSuccess: false,
       error: error.message
     });
@@ -368,11 +521,27 @@ app.post('/guardian-videos', async (req, res) => {
 
 // Guardian Audio + Agent 6
 app.post('/guardian-audio', async (req, res) => {
-  const { verse } = req.body;
-
-  console.log(`\n👼 Executing Guardian Audio + Agent 6 for: ${verse}`);
-
+  let verse; // Declarar fuera del try para que esté disponible en el catch
   try {
+    // Leer último script desde Supabase
+    const { createClient } = require('@supabase/supabase-js');
+    const ws = require('ws');
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      realtime: { transport: ws }
+    });
+
+    const { data: scripts } = await supabase
+      .from('generated_scripts')
+      .select('verse_reference')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    verse = scripts?.[0]?.verse_reference || req.body?.verse;
+    if (!verse) throw new Error('No verse found');
+
+    console.log(`\n👼 Executing Guardian Audio + Agent 6 for: ${verse}`);
+
     const result = execSync(
       `node agents/guardian-audio.js "${verse}"`,
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 10 * 60 * 1000, cwd: BASE_DIR }
@@ -389,7 +558,7 @@ app.post('/guardian-audio', async (req, res) => {
     console.error('❌ Guardian Audio error:', error.message);
     res.status(500).json({
       success: false,
-      verse,
+      verse: error.message,
       guardianAudioSuccess: false,
       error: error.message
     });
@@ -398,11 +567,27 @@ app.post('/guardian-audio', async (req, res) => {
 
 // Guardian Final Video + Agent 7
 app.post('/guardian-final-video', async (req, res) => {
-  const { verse } = req.body;
-
-  console.log(`\n👼 Executing Guardian Final Video + Agent 7 for: ${verse}`);
-
+  let verse; // Declarar fuera del try para que esté disponible en el catch
   try {
+    // Leer último script desde Supabase
+    const { createClient } = require('@supabase/supabase-js');
+    const ws = require('ws');
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      realtime: { transport: ws }
+    });
+
+    const { data: scripts } = await supabase
+      .from('generated_scripts')
+      .select('verse_reference')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    verse = scripts?.[0]?.verse_reference || req.body?.verse;
+    if (!verse) throw new Error('No verse found');
+
+    console.log(`\n👼 Executing Guardian Final Video + Agent 7 for: ${verse}`);
+
     const result = execSync(
       `node agents/guardian-final-video.js "${verse}"`,
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 15 * 60 * 1000, cwd: BASE_DIR }
@@ -423,7 +608,7 @@ app.post('/guardian-final-video', async (req, res) => {
     console.error('❌ Guardian Final Video error:', error.message);
     res.status(500).json({
       success: false,
-      verse,
+      verse: error.message,
       guardianFinalVideoSuccess: false,
       error: error.message
     });
@@ -432,11 +617,27 @@ app.post('/guardian-final-video', async (req, res) => {
 
 // Guardian SEO + Agent 8
 app.post('/guardian-seo', async (req, res) => {
-  const { verse } = req.body;
-
-  console.log(`\n👼 Executing Guardian SEO + Agent 8 for: ${verse}`);
-
+  let verse; // Declarar fuera del try para que esté disponible en el catch
   try {
+    // Leer último script desde Supabase
+    const { createClient } = require('@supabase/supabase-js');
+    const ws = require('ws');
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      realtime: { transport: ws }
+    });
+
+    const { data: scripts } = await supabase
+      .from('generated_scripts')
+      .select('verse_reference')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    verse = scripts?.[0]?.verse_reference || req.body?.verse;
+    if (!verse) throw new Error('No verse found');
+
+    console.log(`\n👼 Executing Guardian SEO + Agent 8 for: ${verse}`);
+
     const result = execSync(
       `node agents/guardian-seo.js "${verse}"`,
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 10 * 60 * 1000, cwd: BASE_DIR }
@@ -460,7 +661,7 @@ app.post('/guardian-seo', async (req, res) => {
     console.error('❌ Guardian SEO error:', error.message);
     res.status(500).json({
       success: false,
-      verse,
+      verse: error.message,
       guardianSeoSuccess: false,
       error: error.message
     });
@@ -469,11 +670,27 @@ app.post('/guardian-seo', async (req, res) => {
 
 // Guardian Upload + YouTube Upload
 app.post('/guardian-upload', async (req, res) => {
-  const { verse } = req.body;
-
-  console.log(`\n👼 Executing Guardian Upload + YouTube Upload for: ${verse}`);
-
+  let verse; // Declarar fuera del try para que esté disponible en el catch
   try {
+    // Leer último script desde Supabase
+    const { createClient } = require('@supabase/supabase-js');
+    const ws = require('ws');
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      realtime: { transport: ws }
+    });
+
+    const { data: scripts } = await supabase
+      .from('generated_scripts')
+      .select('verse_reference')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    verse = scripts?.[0]?.verse_reference || req.body?.verse;
+    if (!verse) throw new Error('No verse found');
+
+    console.log(`\n👼 Executing Guardian Upload + YouTube Upload for: ${verse}`);
+
     const result = execSync(
       `node agents/guardian-upload.js "${verse}"`,
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 40 * 60 * 1000, cwd: BASE_DIR }
@@ -496,7 +713,7 @@ app.post('/guardian-upload', async (req, res) => {
     console.error('❌ Guardian Upload error:', error.message);
     res.status(500).json({
       success: false,
-      verse,
+      verse: error.message,
       guardianUploadSuccess: false,
       error: error.message
     });
@@ -505,21 +722,50 @@ app.post('/guardian-upload', async (req, res) => {
 
 // Guardian Thumbnail + Agent 9
 app.post('/guardian-thumbnail', async (req, res) => {
-  const { verse, videoId } = req.body;
-
-  console.log(`\n👼 Executing Guardian Thumbnail + Agent 9 for: ${verse}, videoId: ${videoId}`);
-
-  if (!videoId) {
-    console.error('videoId no disponible - skip thumbnail');
-    return res.json({
-      success: false,
-      verse,
-      guardianThumbnailSuccess: false,
-      thumbnailSkipped: true
-    });
-  }
-
+  let verse; // Declarar fuera del try para que esté disponible en el catch
+  let videoId; // Declarar fuera del try para que esté disponible en el catch
   try {
+    // Leer último script desde Supabase
+    const { createClient } = require('@supabase/supabase-js');
+    const ws = require('ws');
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      realtime: { transport: ws }
+    });
+
+    const { data: scripts } = await supabase
+      .from('generated_scripts')
+      .select('verse_reference')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    verse = scripts?.[0]?.verse_reference || req.body?.verse;
+    if (!verse) throw new Error('No verse found');
+
+    // Intentar obtener videoId desde el resultado de guardian-upload
+    const verseSlug = verse.replace(/[:\s]/g, '-');
+    const uploadPath = path.join(BASE_DIR, `output/youtube-metadata/upload-result-${verseSlug}.json`);
+    videoId = req.body?.videoId;
+
+    try {
+      const uploadData = JSON.parse(fs.readFileSync(uploadPath, 'utf-8'));
+      videoId = uploadData.videoId || videoId;
+    } catch (e) {
+      console.warn('⚠️  No se pudo leer videoId desde upload-result, usando req.body');
+    }
+
+    console.log(`\n👼 Executing Guardian Thumbnail + Agent 9 for: ${verse}, videoId: ${videoId}`);
+
+    if (!videoId) {
+      console.error('videoId no disponible - skip thumbnail');
+      return res.json({
+        success: false,
+        verse,
+        guardianThumbnailSuccess: false,
+        thumbnailSkipped: true
+      });
+    }
+
     const result = execSync(
       `node agents/guardian-thumbnail.js "${verse}" "${videoId}"`,
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 15 * 60 * 1000, cwd: BASE_DIR }
