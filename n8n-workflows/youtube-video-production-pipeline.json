@@ -1,0 +1,430 @@
+{
+  "name": "🎬 YouTube Video Production Pipeline - FULL AUTOMATION",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "youtube-pipeline",
+        "options": {}
+      },
+      "id": "trigger-http",
+      "name": "HTTP Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "youtube-pipeline-trigger"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract verse from webhook payload or use default\nconst verse = $input.item.json.verse || 'Salmos 23:1';\nconst maxRetries = $input.item.json.maxRetries || 3;\n\nreturn {\n  verse,\n  maxRetries,\n  timestamp: new Date().toISOString(),\n  sessionId: `session-${Date.now()}`\n};"
+      },
+      "id": "prepare-input",
+      "name": "Prepare Input",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/suario/ruy-projects/project-yt && node agents/agent-0-verse-researcher.js \"={{ $json.verse }}\""
+      },
+      "id": "agent-0-verse-researcher",
+      "name": "Agent 0: Verse Researcher",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [650, 300],
+      "notesInFlow": true,
+      "notes": "Investiga el versículo y determina categoría viral"
+    },
+    {
+      "parameters": {
+        "command": "cd /home/suario/ruy-projects/project-yt && node agents/agent-1-viral-scriptwriter.js \"={{ $json.verse }}\""
+      },
+      "id": "agent-1-scriptwriter",
+      "name": "Agent 1: Viral Scriptwriter",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [850, 300],
+      "notesInFlow": true,
+      "notes": "Genera guión optimizado para retención"
+    },
+    {
+      "parameters": {
+        "command": "cd /home/suario/ruy-projects/project-yt && node agents/agent-2-image-designer-pro.js \"={{ $json.verse }}\""
+      },
+      "id": "agent-2-image-designer",
+      "name": "Agent 2: Image Designer PRO",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1050, 300],
+      "notesInFlow": true,
+      "notes": "Diseña prompts visuales cinematográficos"
+    },
+    {
+      "parameters": {
+        "command": "cd /home/suario/ruy-projects/project-yt && node agents/agent-3-batch-generator.js \"={{ $json.verse }}\""
+      },
+      "id": "agent-3-batch-generator",
+      "name": "Agent 3: Batch Generator",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1250, 300],
+      "notesInFlow": true,
+      "notes": "Organiza escenas en batches para generación"
+    },
+    {
+      "parameters": {
+        "command": "cd /home/suario/ruy-projects/project-yt && node agents/agent-4-openrouter.js \"={{ $json.verse }}\""
+      },
+      "id": "agent-4-images",
+      "name": "Agent 4: Generate Images",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1450, 300],
+      "notesInFlow": true,
+      "notes": "Genera imágenes con Flux Pro 1.1 via OpenRouter"
+    },
+    {
+      "parameters": {
+        "command": "cd /home/suario/ruy-projects/project-yt && node agents/guardian-images.js \"={{ $json.verse }}\""
+      },
+      "id": "guardian-images",
+      "name": "Guardian: Validate Images",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1650, 300],
+      "notesInFlow": true,
+      "notes": "Valida calidad de imágenes generadas"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Read image metadata\nconst fs = require('fs');\nconst path = require('path');\n\nconst verse = $json.verse;\nconst verseSlug = verse.replace(/\\s+/g, '-').replace(/:/g, '-');\nconst metadataPath = `/home/suario/ruy-projects/project-yt/output/image-metadata/images-completed-${verseSlug}-*.json`;\n\n// Find the file\nconst files = fs.readdirSync('/home/suario/ruy-projects/project-yt/output/image-metadata/')\n  .filter(f => f.includes(verseSlug) && f.startsWith('images-completed'));\n\nif (files.length === 0) {\n  throw new Error('No image metadata found');\n}\n\nconst metadata = JSON.parse(\n  fs.readFileSync(`/home/suario/ruy-projects/project-yt/output/image-metadata/${files[0]}`, 'utf-8')\n);\n\nreturn {\n  verse,\n  imageCount: metadata.images.length,\n  images: metadata.images\n};"
+      },
+      "id": "read-image-metadata",
+      "name": "Read Image Metadata",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Call Agent 5 for each image to generate video\nconst verse = $json.verse;\nconst images = $json.images;\n\nconst { execSync } = require('child_process');\nconst fs = require('fs');\nconst path = require('path');\n\nconst verseSlug = verse.replace(/\\s+/g, '-').replace(/:/g, '-');\n\n// Ejecutar Agent 5 con batch de imágenes\nconst command = `cd /home/suario/ruy-projects/project-yt && node agents/agent-5-video-animator.js \"${verse}\"`;\n\ntry {\n  execSync(command, { stdio: 'inherit' });\n  \n  // Read video metadata\n  const videoFiles = fs.readdirSync('/home/suario/ruy-projects/project-yt/output/video-metadata/')\n    .filter(f => f.includes(verseSlug) && f.startsWith('video-metadata'));\n  \n  if (videoFiles.length === 0) {\n    throw new Error('No video metadata found');\n  }\n  \n  const videoMetadata = JSON.parse(\n    fs.readFileSync(`/home/suario/ruy-projects/project-yt/output/video-metadata/${videoFiles[0]}`, 'utf-8')\n  );\n  \n  return {\n    verse,\n    videoCount: videoMetadata.clips?.length || 0,\n    videoMetadata\n  };\n  \n} catch (error) {\n  throw new Error(`Agent 5 failed: ${error.message}`);\n}"
+      },
+      "id": "agent-5-video-animator",
+      "name": "Agent 5: Video Animator",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [2050, 300],
+      "notesInFlow": true,
+      "notes": "Genera clips de video desde imágenes"
+    },
+    {
+      "parameters": {
+        "command": "cd /home/suario/ruy-projects/project-yt && node agents/guardian-videos.js \"={{ $json.verse }}\""
+      },
+      "id": "guardian-videos",
+      "name": "Guardian: Validate Videos",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2250, 300],
+      "notesInFlow": true,
+      "notes": "Valida duración y calidad de videos"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Generate audio with Agent 6\nconst verse = $json.verse;\nconst { execSync } = require('child_process');\nconst fs = require('fs');\n\nconst verseSlug = verse.replace(/\\s+/g, '-').replace(/:/g, '-');\n\n// Ejecutar Agent 6 (audio TTS)\nconst command = `cd /home/suario/ruy-projects/project-yt && bash agents/run-agent-6.sh \"${verse}\"`;\n\ntry {\n  execSync(command, { stdio: 'inherit' });\n  \n  // Read audio metadata\n  const audioFiles = fs.readdirSync('/home/suario/ruy-projects/project-yt/output/audio-metadata/')\n    .filter(f => f.includes(verseSlug));\n  \n  if (audioFiles.length === 0) {\n    throw new Error('No audio metadata found');\n  }\n  \n  const audioMetadata = JSON.parse(\n    fs.readFileSync(`/home/suario/ruy-projects/project-yt/output/audio-metadata/${audioFiles[0]}`, 'utf-8')\n  );\n  \n  return {\n    verse,\n    audioMetadata\n  };\n  \n} catch (error) {\n  throw new Error(`Agent 6 failed: ${error.message}`);\n}"
+      },
+      "id": "agent-6-audio",
+      "name": "Agent 6: Audio Voice-Over",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [2450, 300],
+      "notesInFlow": true,
+      "notes": "Genera narración con ElevenLabs TTS"
+    },
+    {
+      "parameters": {
+        "command": "cd /home/suario/ruy-projects/project-yt && node agents/guardian-audio.js \"={{ $json.verse }}\""
+      },
+      "id": "guardian-audio",
+      "name": "Guardian: Validate Audio",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2650, 300],
+      "notesInFlow": true,
+      "notes": "Valida duración y calidad de audio"
+    },
+    {
+      "parameters": {
+        "command": "cd /home/suario/ruy-projects/project-yt && node agents/agent-7-video-editor.js \"={{ $json.verse }}\""
+      },
+      "id": "agent-7-video-editor",
+      "name": "Agent 7: Video Editor",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2850, 300],
+      "notesInFlow": true,
+      "notes": "Ensambla video final con FFmpeg"
+    },
+    {
+      "parameters": {
+        "command": "cd /home/suario/ruy-projects/project-yt && node agents/guardian-final-video.js \"={{ $json.verse }}\""
+      },
+      "id": "guardian-final-video",
+      "name": "Guardian: Validate Final Video",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [3050, 300],
+      "notesInFlow": true,
+      "notes": "Valida video final antes de upload"
+    },
+    {
+      "parameters": {
+        "command": "cd /home/suario/ruy-projects/project-yt && node agents/agent-8-youtube-seo-expert.js \"={{ $json.verse }}\""
+      },
+      "id": "agent-8-youtube-seo",
+      "name": "Agent 8: YouTube SEO Expert",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [3250, 300],
+      "notesInFlow": true,
+      "notes": "Optimiza título, descripción y tags"
+    },
+    {
+      "parameters": {
+        "command": "cd /home/suario/ruy-projects/project-yt && node agents/agent-9-thumbnail-generator-production.js \"={{ $json.verse }}\""
+      },
+      "id": "agent-9-thumbnail",
+      "name": "Agent 9: Thumbnail Generator HARDENED",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [3450, 300],
+      "notesInFlow": true,
+      "notes": "Genera thumbnail con validaciones y retry"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Continue Agent 9 - Generate base image with Magnific\nconst verse = $json.verse;\nconst fs = require('fs');\nconst path = require('path');\n\nconst verseSlug = verse.replace(/\\s+/g, '-').replace(/:/g, '-');\n\n// Read prompt file generated by Agent 9\nconst promptPath = `/home/suario/ruy-projects/project-yt/output/thumbnails/prompt-base-${verseSlug}.txt`;\n\nif (!fs.existsSync(promptPath)) {\n  throw new Error('Agent 9 prompt file not found');\n}\n\nconst basePrompt = fs.readFileSync(promptPath, 'utf-8');\n\nreturn {\n  verse,\n  magnificParams: {\n    prompt: basePrompt,\n    mode: 'recraft-v4-1',\n    aspectRatio: '16:9',\n    count: 1\n  }\n};"
+      },
+      "id": "prepare-magnific-thumbnail",
+      "name": "Prepare Magnific Thumbnail",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [3650, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.MAGNIFIC_API_URL }}/images/generate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.MAGNIFIC_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $json.magnificParams.prompt }}"
+            },
+            {
+              "name": "mode",
+              "value": "={{ $json.magnificParams.mode }}"
+            },
+            {
+              "name": "aspectRatio",
+              "value": "={{ $json.magnificParams.aspectRatio }}"
+            },
+            {
+              "name": "count",
+              "value": "={{ $json.magnificParams.count }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "call-magnific-api-thumbnail",
+      "name": "Call Magnific API - Thumbnail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [3850, 300],
+      "notesInFlow": true,
+      "notes": "Genera imagen base con Recraft V4.1"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Wait for creation completion\nconst creationIdentifier = $json.identifier || $json.creationIdentifier;\n\nif (!creationIdentifier) {\n  throw new Error('No creation identifier returned from Magnific');\n}\n\nconst { execSync } = require('child_process');\n\n// Poll for completion (max 2 minutes)\nlet completed = false;\nlet attempts = 0;\nconst maxAttempts = 24; // 24 * 5s = 2 minutes\n\nwhile (!completed && attempts < maxAttempts) {\n  try {\n    // Check status via Magnific API or file system\n    const result = execSync(\n      `curl -s \"${process.env.MAGNIFIC_API_URL}/creations/${creationIdentifier}\"`,\n      { encoding: 'utf-8' }\n    );\n    \n    const status = JSON.parse(result);\n    \n    if (status.status === 'completed') {\n      completed = true;\n      return {\n        verse: $json.verse,\n        creationIdentifier,\n        imageUrl: status.url,\n        status: 'completed'\n      };\n    }\n    \n    if (status.status === 'failed') {\n      throw new Error('Magnific generation failed');\n    }\n    \n    // Wait 5 seconds before next check\n    execSync('sleep 5');\n    attempts++;\n    \n  } catch (error) {\n    throw new Error(`Error checking Magnific status: ${error.message}`);\n  }\n}\n\nif (!completed) {\n  throw new Error('Timeout waiting for Magnific generation');\n}"
+      },
+      "id": "wait-for-thumbnail-creation",
+      "name": "Wait for Thumbnail Creation",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [4050, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Continue Agent 9 - Compose text overlay\nconst verse = $json.verse;\nconst baseImageUrl = $json.imageUrl;\n\nconst { execSync } = require('child_process');\nconst fs = require('fs');\nconst https = require('https');\nconst path = require('path');\n\nconst verseSlug = verse.replace(/\\s+/g, '-').replace(/:/g, '-');\nconst baseImagePath = `/home/suario/ruy-projects/project-yt/output/thumbnails/base-${verseSlug}.png`;\n\n// Download base image\nconst file = fs.createWriteStream(baseImagePath);\n\nawait new Promise((resolve, reject) => {\n  https.get(baseImageUrl, (response) => {\n    response.pipe(file);\n    file.on('finish', () => {\n      file.close();\n      resolve();\n    });\n  }).on('error', reject);\n});\n\n// Compose with text\ntry {\n  execSync(`cd /home/suario/ruy-projects/project-yt && node compose-thumbnail.js \"${verse}\"`, {\n    stdio: 'inherit'\n  });\n  \n  const thumbnailPath = `/home/suario/ruy-projects/project-yt/output/thumbnails/thumbnail-${verseSlug}.png`;\n  \n  if (!fs.existsSync(thumbnailPath)) {\n    throw new Error('Thumbnail composition failed');\n  }\n  \n  return {\n    verse,\n    thumbnailPath,\n    status: 'completed'\n  };\n  \n} catch (error) {\n  throw new Error(`Thumbnail composition failed: ${error.message}`);\n}"
+      },
+      "id": "compose-thumbnail-text",
+      "name": "Compose Thumbnail Text",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [4250, 300]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/suario/ruy-projects/project-yt && node agents/guardian-thumbnail.js \"={{ $json.verse }}\""
+      },
+      "id": "guardian-thumbnail",
+      "name": "Guardian: Validate Thumbnail",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [4450, 300],
+      "notesInFlow": true,
+      "notes": "Valida thumbnail final"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Upload to YouTube\nconst verse = $json.verse;\nconst { execSync } = require('child_process');\nconst fs = require('fs');\n\nconst verseSlug = verse.replace(/\\s+/g, '-').replace(/:/g, '-');\n\n// Paths\nconst videoPath = `/home/suario/ruy-projects/project-yt/output/final-videos/final-${verseSlug}.mp4`;\nconst thumbnailPath = `/home/suario/ruy-projects/project-yt/output/thumbnails/thumbnail-${verseSlug}.png`;\nconst metadataPath = `/home/suario/ruy-projects/project-yt/output/youtube-metadata/youtube-metadata-${verseSlug}.json`;\n\n// Verify files exist\nif (!fs.existsSync(videoPath)) {\n  throw new Error(`Video not found: ${videoPath}`);\n}\n\nif (!fs.existsSync(thumbnailPath)) {\n  throw new Error(`Thumbnail not found: ${thumbnailPath}`);\n}\n\nif (!fs.existsSync(metadataPath)) {\n  throw new Error(`Metadata not found: ${metadataPath}`);\n}\n\nconst metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));\n\n// Upload video\ntry {\n  const uploadCommand = `cd /home/suario/ruy-projects/project-yt && node upload-video.js \"${verse}\"`;\n  const result = execSync(uploadCommand, { encoding: 'utf-8' });\n  \n  // Extract video ID from output\n  const videoIdMatch = result.match(/Video ID: ([a-zA-Z0-9_-]+)/);\n  const videoId = videoIdMatch ? videoIdMatch[1] : null;\n  \n  if (!videoId) {\n    throw new Error('Failed to extract video ID from upload result');\n  }\n  \n  return {\n    verse,\n    videoId,\n    videoUrl: `https://www.youtube.com/watch?v=${videoId}`,\n    title: metadata.youtube.title,\n    uploadedAt: new Date().toISOString()\n  };\n  \n} catch (error) {\n  throw new Error(`YouTube upload failed: ${error.message}`);\n}"
+      },
+      "id": "upload-to-youtube",
+      "name": "Upload to YouTube",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [4650, 300],
+      "notesInFlow": true,
+      "notes": "Sube video final a YouTube"
+    },
+    {
+      "parameters": {
+        "command": "cd /home/suario/ruy-projects/project-yt && node agents/guardian-upload.js \"={{ $json.verse }}\""
+      },
+      "id": "guardian-upload",
+      "name": "Guardian: Validate Upload",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [4850, 300],
+      "notesInFlow": true,
+      "notes": "Verifica que el upload fue exitoso"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Success notification\nconst verse = $json.verse;\nconst videoUrl = $json.videoUrl;\nconst title = $json.title;\n\nconst message = `✅ VIDEO PUBLICADO EXITOSAMENTE\\n\\n📖 Versículo: ${verse}\\n📺 URL: ${videoUrl}\\n📝 Título: ${title}\\n⏰ Publicado: ${new Date().toISOString()}`;\n\nconsole.log(message);\n\nreturn {\n  success: true,\n  verse,\n  videoUrl,\n  title,\n  message\n};"
+      },
+      "id": "success-notification",
+      "name": "Success Notification",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [5050, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Error handler\nconst error = $json.error || 'Unknown error';\nconst verse = $json.verse || 'Unknown verse';\nconst failedStep = $json.failedStep || 'Unknown step';\n\nconst message = `❌ PIPELINE FAILED\\n\\n📖 Versículo: ${verse}\\n🚫 Error: ${error}\\n📍 Paso fallido: ${failedStep}\\n⏰ Timestamp: ${new Date().toISOString()}`;\n\nconsole.error(message);\n\nreturn {\n  success: false,\n  verse,\n  error,\n  failedStep,\n  message\n};"
+      },
+      "id": "error-handler",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [3250, 500],
+      "notesInFlow": true,
+      "notes": "Captura errores de cualquier agente"
+    }
+  ],
+  "connections": {
+    "HTTP Trigger": {
+      "main": [[{ "node": "Prepare Input", "type": "main", "index": 0 }]]
+    },
+    "Prepare Input": {
+      "main": [[{ "node": "Agent 0: Verse Researcher", "type": "main", "index": 0 }]]
+    },
+    "Agent 0: Verse Researcher": {
+      "main": [[{ "node": "Agent 1: Viral Scriptwriter", "type": "main", "index": 0 }]]
+    },
+    "Agent 1: Viral Scriptwriter": {
+      "main": [[{ "node": "Agent 2: Image Designer PRO", "type": "main", "index": 0 }]]
+    },
+    "Agent 2: Image Designer PRO": {
+      "main": [[{ "node": "Agent 3: Batch Generator", "type": "main", "index": 0 }]]
+    },
+    "Agent 3: Batch Generator": {
+      "main": [[{ "node": "Agent 4: Generate Images", "type": "main", "index": 0 }]]
+    },
+    "Agent 4: Generate Images": {
+      "main": [[{ "node": "Guardian: Validate Images", "type": "main", "index": 0 }]]
+    },
+    "Guardian: Validate Images": {
+      "main": [[{ "node": "Read Image Metadata", "type": "main", "index": 0 }]]
+    },
+    "Read Image Metadata": {
+      "main": [[{ "node": "Agent 5: Video Animator", "type": "main", "index": 0 }]]
+    },
+    "Agent 5: Video Animator": {
+      "main": [[{ "node": "Guardian: Validate Videos", "type": "main", "index": 0 }]]
+    },
+    "Guardian: Validate Videos": {
+      "main": [[{ "node": "Agent 6: Audio Voice-Over", "type": "main", "index": 0 }]]
+    },
+    "Agent 6: Audio Voice-Over": {
+      "main": [[{ "node": "Guardian: Validate Audio", "type": "main", "index": 0 }]]
+    },
+    "Guardian: Validate Audio": {
+      "main": [[{ "node": "Agent 7: Video Editor", "type": "main", "index": 0 }]]
+    },
+    "Agent 7: Video Editor": {
+      "main": [[{ "node": "Guardian: Validate Final Video", "type": "main", "index": 0 }]]
+    },
+    "Guardian: Validate Final Video": {
+      "main": [[{ "node": "Agent 8: YouTube SEO Expert", "type": "main", "index": 0 }]]
+    },
+    "Agent 8: YouTube SEO Expert": {
+      "main": [[{ "node": "Agent 9: Thumbnail Generator HARDENED", "type": "main", "index": 0 }]]
+    },
+    "Agent 9: Thumbnail Generator HARDENED": {
+      "main": [[{ "node": "Prepare Magnific Thumbnail", "type": "main", "index": 0 }]]
+    },
+    "Prepare Magnific Thumbnail": {
+      "main": [[{ "node": "Call Magnific API - Thumbnail", "type": "main", "index": 0 }]]
+    },
+    "Call Magnific API - Thumbnail": {
+      "main": [[{ "node": "Wait for Thumbnail Creation", "type": "main", "index": 0 }]]
+    },
+    "Wait for Thumbnail Creation": {
+      "main": [[{ "node": "Compose Thumbnail Text", "type": "main", "index": 0 }]]
+    },
+    "Compose Thumbnail Text": {
+      "main": [[{ "node": "Guardian: Validate Thumbnail", "type": "main", "index": 0 }]]
+    },
+    "Guardian: Validate Thumbnail": {
+      "main": [[{ "node": "Upload to YouTube", "type": "main", "index": 0 }]]
+    },
+    "Upload to YouTube": {
+      "main": [[{ "node": "Guardian: Validate Upload", "type": "main", "index": 0 }]]
+    },
+    "Guardian: Validate Upload": {
+      "main": [[{ "node": "Success Notification", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "id": "youtube-automation",
+      "name": "YouTube Automation"
+    },
+    {
+      "id": "production-ready",
+      "name": "Production Ready"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-07-30T00:00:00.000Z",
+  "versionId": "1"
+}

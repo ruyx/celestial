@@ -233,42 +233,57 @@ app.post('/agent-0', async (req, res) => {
   }
 });
 
-// Agent 1: Viral Scriptwriter (lee de Supabase)
+// Agent 1: Viral Scriptwriter (lee decisión de Agent 0 y GENERA script)
 app.post('/agent-1', async (req, res) => {
   console.log('\n📝 Executing Agent 1: Viral Scriptwriter');
 
   try {
+    // 1. Leer decisión COMPLETA de Agent 0
+    const agent0DecisionPath = path.join(BASE_DIR, 'output/agent-0-decision.json');
+
+    if (!fs.existsSync(agent0DecisionPath)) {
+      throw new Error('Agent 0 decision file not found - run Agent 0 first');
+    }
+
+    const agent0Decision = JSON.parse(fs.readFileSync(agent0DecisionPath, 'utf-8'));
+    console.log(`✅ Using verse from Agent 0: "${agent0Decision.reference}"`);
+
+    // 2. GENERAR script llamando al agente Node.js
+    console.log('🤖 Llamando a agent-1-viral-scriptwriter.js para GENERAR script...');
+
+    const scriptwriterOutput = execSync(
+      `node agents/agent-1-viral-scriptwriter.js`,
+      {
+        encoding: 'utf-8',
+        maxBuffer: 10 * 1024 * 1024,
+        cwd: BASE_DIR
+      }
+    );
+
+    console.log('✅ Script generado exitosamente');
+
+    // 3. Leer el script guardado por el agente
     const { createClient } = require('@supabase/supabase-js');
     const ws = require('ws');
 
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Faltan credenciales de Supabase');
-    }
-
     const supabase = createClient(supabaseUrl, supabaseKey, {
       auth: { autoRefreshToken: false, persistSession: false },
       realtime: { transport: ws }
     });
 
+    // Obtener el script recién generado
     const { data: script, error } = await supabase
       .from('generated_scripts')
       .select('*')
-      .order('generated_at', { ascending: false })
+      .eq('verse_reference', agent0Decision.reference)
+      .order('created_at', { ascending: false })
       .limit(1)
       .single();
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return res.status(404).json({
-          success: false,
-          error: 'No hay scripts disponibles'
-        });
-      }
-      throw error;
-    }
+    if (error) throw error;
 
     const metadata = script.metadata || {};
     const scenes = script.scenes || [];
@@ -421,21 +436,27 @@ app.post('/agent-3', async (req, res) => {
 app.post('/guardian-images', async (req, res) => {
   let verse; // Declarar fuera del try para que esté disponible en el catch
   try {
-    // Leer último script desde Supabase
-    const { createClient } = require('@supabase/supabase-js');
-    const ws = require('ws');
-    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false },
-      realtime: { transport: ws }
-    });
+    // FIX: Priorizar req.body.verse (pasado desde n8n) sobre consulta a Supabase
+    verse = req.body?.verse;
 
-    const { data: scripts } = await supabase
-      .from('generated_scripts')
-      .select('verse_reference')
-      .order('created_at', { ascending: false })
-      .limit(1);
+    // Si no viene en el request, consultar Supabase como fallback
+    if (!verse) {
+      const { createClient } = require('@supabase/supabase-js');
+      const ws = require('ws');
+      const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+        auth: { autoRefreshToken: false, persistSession: false },
+        realtime: { transport: ws }
+      });
 
-    verse = scripts?.[0]?.verse_reference || req.body?.verse;
+      const { data: scripts } = await supabase
+        .from('generated_scripts')
+        .select('verse_reference')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      verse = scripts?.[0]?.verse_reference;
+    }
+
     if (!verse) throw new Error('No verse found');
 
   console.log(`\n👼 Executing Guardian Images + Agent 4 for: ${verse}`);
@@ -477,31 +498,47 @@ app.post('/guardian-images', async (req, res) => {
 app.post('/guardian-videos', async (req, res) => {
   let verse; // Declarar fuera del try para que esté disponible en el catch
   try {
-    // Leer último script desde Supabase
-    const { createClient } = require('@supabase/supabase-js');
-    const ws = require('ws');
-    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false },
-      realtime: { transport: ws }
-    });
+    // FIX: Priorizar req.body.verse (pasado desde n8n) sobre consulta a Supabase
+    verse = req.body?.verse;
 
-    const { data: scripts } = await supabase
-      .from('generated_scripts')
-      .select('verse_reference')
-      .order('created_at', { ascending: false })
-      .limit(1);
+    // Si no viene en el request, consultar Supabase como fallback
+    if (!verse) {
+      const { createClient } = require('@supabase/supabase-js');
+      const ws = require('ws');
+      const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+        auth: { autoRefreshToken: false, persistSession: false },
+        realtime: { transport: ws }
+      });
 
-    verse = scripts?.[0]?.verse_reference || req.body?.verse;
+      const { data: scripts } = await supabase
+        .from('generated_scripts')
+        .select('verse_reference')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      verse = scripts?.[0]?.verse_reference;
+    }
+
     if (!verse) throw new Error('No verse found');
 
     console.log(`\n👼 Executing Guardian Videos + Agent 5 for: ${verse}`);
 
-    const result = execSync(
+    // Paso 1: Ejecutar Agent 5 para generar los videos (Magnific MCP)
+    // Ejecutamos directamente sin SSH para evitar bloqueos de Claude Code
+    console.log('🎬 Step 1/2: Running Agent 5 (Magnific MCP) directly...');
+    const agent5Result = execSync(
+      `bash run-agent-5.sh`,
+      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 30 * 60 * 1000, cwd: BASE_DIR }
+    );
+    console.log(agent5Result);
+
+    // Paso 2: Ejecutar Guardian para validar los videos
+    console.log('\n👼 Step 2/2: Running Guardian to validate videos...');
+    const guardianResult = execSync(
       `node agents/guardian-videos.js "${verse}"`,
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 20 * 60 * 1000, cwd: BASE_DIR }
     );
-
-    console.log(result);
+    console.log(guardianResult);
 
     res.json({
       success: true,
@@ -542,16 +579,26 @@ app.post('/guardian-audio', async (req, res) => {
 
     console.log(`\n👼 Executing Guardian Audio + Agent 6 for: ${verse}`);
 
-    const result = execSync(
+    // PASO 1: Ejecutar Agent 6 MCP para generar el audio via Magnific
+    console.log('\n🎙️  PASO 1: Ejecutando Agent 6 MCP (audio generation via Magnific)...');
+    const agent6Result = execSync(
+      `bash run-agent-6.sh`,
+      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 15 * 60 * 1000, cwd: BASE_DIR }
+    );
+    console.log(agent6Result);
+
+    // PASO 2: Ejecutar Guardian Audio para validar
+    console.log('\n👼 PASO 2: Ejecutando Guardian Audio (validación)...');
+    const guardianResult = execSync(
       `node agents/guardian-audio.js "${verse}"`,
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 10 * 60 * 1000, cwd: BASE_DIR }
     );
-
-    console.log(result);
+    console.log(guardianResult);
 
     res.json({
       success: true,
       verse,
+      agent6Success: true,
       guardianAudioSuccess: true
     });
   } catch (error) {
@@ -720,7 +767,7 @@ app.post('/guardian-upload', async (req, res) => {
   }
 });
 
-// Guardian Thumbnail + Agent 9
+// Guardian Thumbnail + Agent 9 PRODUCTION (Hardened)
 app.post('/guardian-thumbnail', async (req, res) => {
   let verse; // Declarar fuera del try para que esté disponible en el catch
   let videoId; // Declarar fuera del try para que esté disponible en el catch
@@ -754,7 +801,8 @@ app.post('/guardian-thumbnail', async (req, res) => {
       console.warn('⚠️  No se pudo leer videoId desde upload-result, usando req.body');
     }
 
-    console.log(`\n👼 Executing Guardian Thumbnail + Agent 9 for: ${verse}, videoId: ${videoId}`);
+    console.log(`\n👼 Executing Agent 9 PRODUCTION (Hardened) for: ${verse}, videoId: ${videoId}`);
+    console.log(`✅ Using production version with retry, validation, and error recovery`);
 
     if (!videoId) {
       console.error('videoId no disponible - skip thumbnail');
@@ -766,21 +814,32 @@ app.post('/guardian-thumbnail', async (req, res) => {
       });
     }
 
+    // PASO 1: Ejecutar Agent 9 PRODUCTION (hardened version con retry y validación)
     const result = execSync(
-      `node agents/guardian-thumbnail.js "${verse}" "${videoId}"`,
+      `node agents/agent-9-thumbnail-generator-production.js "${verse}"`,
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 15 * 60 * 1000, cwd: BASE_DIR }
     );
 
     console.log(result);
 
+    // PASO 2: Ejecutar Guardian para validar thumbnail final y subirlo a YouTube
+    console.log('\n👼 Ejecutando Guardian para validar y subir thumbnail...');
+    const guardianResult = execSync(
+      `node agents/guardian-thumbnail.js "${verse}" "${videoId}"`,
+      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 10 * 60 * 1000, cwd: BASE_DIR }
+    );
+
+    console.log(guardianResult);
+
     res.json({
       success: true,
       verse,
       guardianThumbnailSuccess: true,
-      thumbnailUpdated: true
+      thumbnailUpdated: true,
+      productionVersion: true
     });
   } catch (error) {
-    console.error('❌ Guardian Thumbnail error:', error.message);
+    console.error('❌ Agent 9 Production error:', error.message);
     res.status(500).json({
       success: false,
       verse,
