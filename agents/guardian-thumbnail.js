@@ -261,24 +261,55 @@ class ThumbnailGuardian {
   }
 
   async executeRetry(strategy) {
-    console.log(`\n🔧 Ejecutando retry para thumbnail con Oscar Marrón framework...`);
+    console.log(`\n🔧 Ejecutando retry para thumbnail con compositor Python V2...`);
     console.log(`   - Directorio: ${THUMBNAILS_DIR}`);
 
-    // Integrar con Agent 9 (Thumbnail Oscar Marrón)
-    const { generateThumbnail } = require('./agent-9-thumbnail-oscar-marron.js');
+    // ESTRATEGIA: Usar compositor Python V2 directamente
+    // El agent-9-production requiere Magnific MCP interactivo
+    // Para flujos automáticos, usamos el compositor standalone
 
-    // Obtener videoId si está disponible desde process.argv
-    const videoId = process.argv[3]; // Argumento opcional
+    const { execSync } = require('child_process');
 
-    const result = await generateThumbnail(this.verse, { videoId });
+    try {
+      // 1. Verificar que exista metadata con thumbnailPhrase
+      const verseForFilename = this.verse.replace(/\s+/g, '-').replace(/:/g, '-');
+      const metadataPath = path.join(__dirname, '..', 'output', 'youtube-metadata', `youtube-metadata-${verseForFilename}.json`);
 
-    if (!result.success) {
-      throw new Error(`Agent 9 falló: ${result.error || 'Unknown error'}`);
+      if (!fs.existsSync(metadataPath)) {
+        throw new Error(`Metadata no encontrada: ${metadataPath}`);
+      }
+
+      const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+
+      if (!metadata.thumbnailPhrase) {
+        throw new Error('metadata.thumbnailPhrase no existe. Ejecutar Agent-8 primero.');
+      }
+
+      // 2. Verificar imagen base (debe ser generada por Agent-3/4)
+      const baseImagePath = path.join(__dirname, '..', 'output', 'base-images', `base-${verseForFilename}.png`);
+
+      if (!fs.existsSync(baseImagePath)) {
+        throw new Error(`Imagen base no encontrada: ${baseImagePath}. Ejecutar Agent-3/4 primero.`);
+      }
+
+      // 3. Ejecutar compositor Python V2
+      const outputPath = path.join(__dirname, '..', 'output', 'thumbnails', `thumbnail-${verseForFilename}.jpg`);
+
+      const result = execSync(
+        `python3 compose-thumbnail-pillow-v2.py "${baseImagePath}" "${metadata.thumbnailPhrase}" "${metadata.category}" "${outputPath}"`,
+        {
+          encoding: 'utf-8',
+          cwd: path.join(__dirname, '..'),
+          stdio: 'inherit'
+        }
+      );
+
+      console.log(`✅ Compositor Python V2 completado: ${outputPath}`);
+
+      return { success: true, thumbnailPath: outputPath };
+    } catch (error) {
+      throw new Error(`Compositor Python V2 falló: ${error.message}`);
     }
-
-    console.log(`✅ Agent 9 completado: ${result.thumbnailPath}`);
-
-    return result;
   }
 
   sleep(ms) {

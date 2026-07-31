@@ -10,7 +10,7 @@
  * determinan si las personas hacen click. Debe ser el MEJOR.
  *
  * CAPACIDADES:
- * ✅ Títulos clickeables con keywords principales (70 chars max)
+ * ✅ Títulos CORTOS y con PUNCH - Preguntas/Afirmaciones (50 chars max)
  * ✅ Descripciones SEO-optimizadas (5000 chars max)
  * ✅ 25-30 tags estratégicos (broad, medium, long-tail)
  * ✅ Timeline/capítulos con timestamps
@@ -91,26 +91,27 @@ const CATEGORY_KEYWORDS = {
 // ═══════════════════════════════════════════════════════════════════
 
 const TITLE_TEMPLATES = [
-  // Formato: Urgencia + Promesa
-  '{keyword} | Este Versículo Cambiará Tu Vida HOY',
-  'Si Te Falta {keyword}, ESCUCHA ESTO ({verse})',
-  '{verse}: La Promesa Que Necesitas Escuchar',
+  // Formato: PREGUNTA DIRECTA (35-45 chars)
+  '{verse}: ¿ESTO CAMBIA TODO?',
+  '¿{keyword}? {verse} RESPONDE',
+  '¿Por Qué {verse}? BRUTAL',
+  '{verse}: ¿Listos para ESTO?',
 
-  // Formato: Transformación + Timeframe
-  'Cómo Encontrar {keyword} en 2 Minutos ({verse})',
-  '{verse} | {keyword} Instantánea de Dios',
+  // Formato: AFIRMACIÓN CON PUNCH (30-40 chars)
+  '{verse} = PODER',
+  '{keyword}: La PROMESA Definitiva',
+  '{verse} | NECESITAS ESTO HOY',
+  '{keyword} REAL - {verse}',
 
-  // Formato: Problema + Solución
-  'Sientes {emotion}? {verse} Es Para Ti',
-  '{verse} | {solution} Cuando Más Lo Necesitas',
+  // Formato: IMPERATIVO CORTO (25-35 chars)
+  'ESCUCHA {verse} AHORA',
+  '{verse}: NO LO IGNORES',
+  'MIRA: {verse}',
 
-  // Formato: Curiosidad + Beneficio
-  '¿Por Qué {verse} Es TAN Poderoso?',
-  '{verse}: 4 Promesas en 1 Solo Versículo',
-
-  // Formato: Directo + Imperativo
-  'DETENTE y Escucha {verse} | {keyword}',
-  'No Temas: {verse} | {solution}'
+  // Formato: URGENCIA + EMOCIÓN (40-50 chars)
+  '{verse} | Esto ES Para Ti',
+  '{keyword} HOY - {verse}',
+  '{verse}: TÚ DEBES OÍR ESTO'
 ];
 
 // ═══════════════════════════════════════════════════════════════════
@@ -139,7 +140,8 @@ function truncateText(text, maxLength) {
 }
 
 /**
- * Genera título clickeable optimizado (70 chars max)
+ * Genera título CORTO y con PUNCH (50 chars max)
+ * Formato: Preguntas o afirmaciones directas
  */
 function generateTitle(verse, category, scriptText) {
   const keywords = CATEGORY_KEYWORDS[category] || CATEGORY_KEYWORDS.fortaleza;
@@ -158,13 +160,13 @@ function generateTitle(verse, category, scriptText) {
       .replace('{solution}', solution);
   });
 
-  // Filtrar títulos que cumplan el límite de 70 caracteres
-  const validTitles = titleOptions.filter(title => title.length <= 70);
+  // Filtrar títulos que cumplan el límite de 50 caracteres (CORTOS Y CON PUNCH)
+  const validTitles = titleOptions.filter(title => title.length <= 50);
 
-  // Seleccionar el título más atractivo (basado en longitud óptima 50-60 chars)
+  // Seleccionar el título más atractivo (basado en longitud óptima 35-45 chars)
   const optimalTitle = validTitles.sort((a, b) => {
-    const aScore = Math.abs(a.length - 55); // Óptimo: 55 caracteres
-    const bScore = Math.abs(b.length - 55);
+    const aScore = Math.abs(a.length - 40); // Óptimo: 40 caracteres (MÁS CORTO)
+    const bScore = Math.abs(b.length - 40);
     return aScore - bScore;
   })[0];
 
@@ -333,13 +335,61 @@ function generateTags(verse, category) {
 }
 
 /**
- * Genera recomendación de thumbnail
+ * Genera frase thumbnail optimizada (3-6 palabras, con punch)
+ * Basada en las keywords de la categoría + promesa principal
  */
-function generateThumbnailRecommendation(verse, category) {
+function generateThumbnailPhrase(verse, category, scriptText) {
   const keywords = CATEGORY_KEYWORDS[category] || CATEGORY_KEYWORDS.fortaleza;
 
+  // Templates de frases thumbnail (3-6 palabras, con PUNCH emocional)
+  const phraseTemplates = [
+    // Formato: PROMESA DIRECTA
+    `${keywords.solutions[0]}`,
+    `Dios Te Da ${keywords.primary[0]}`,
+    `La Promesa De ${keywords.primary[0]}`,
+    `${keywords.primary[0]} Para Ti Hoy`,
+
+    // Formato: TRANSFORMACIÓN
+    `Esto Cambia Todo`,
+    `Tu Vida Cambia Aquí`,
+    `Descubre ${keywords.primary[0]} Real`,
+    `${keywords.primary[0]} Que Transforma`,
+
+    // Formato: SOLUCIÓN A PROBLEMA
+    `Adiós ${keywords.emotions[0]}`,
+    `${keywords.primary[0]} Contra ${keywords.emotions[0]}`,
+    `Cuando ${keywords.emotions[0]} Llega`,
+    `${keywords.primary[0]} En Crisis`,
+
+    // Formato: IMPERATIVO CON BENEFICIO
+    `Encuentra ${keywords.primary[0]} Ahora`,
+    `Recibe ${keywords.solutions[0]}`,
+    `Confía En Esta Promesa`,
+    `Descansa En ${keywords.primary[0]}`
+  ];
+
+  // Seleccionar frase con longitud óptima (15-35 caracteres)
+  const optimalPhrases = phraseTemplates
+    .filter(phrase => phrase.length >= 15 && phrase.length <= 35)
+    .sort((a, b) => {
+      // Priorizar frases más cortas pero con punch
+      const aScore = Math.abs(a.length - 25); // Óptimo: 25 caracteres
+      const bScore = Math.abs(b.length - 25);
+      return aScore - bScore;
+    });
+
+  return optimalPhrases[0] || phraseTemplates[0];
+}
+
+/**
+ * Genera recomendación de thumbnail
+ */
+function generateThumbnailRecommendation(verse, category, scriptText) {
+  const keywords = CATEGORY_KEYWORDS[category] || CATEGORY_KEYWORDS.fortaleza;
+  const thumbnailPhrase = generateThumbnailPhrase(verse, category, scriptText);
+
   return {
-    textOverlay: verse.toUpperCase(), // Máximo 6 palabras
+    textOverlay: thumbnailPhrase.toUpperCase(), // Frase optimizada 3-6 palabras
     secondaryText: keywords.primary[0].toUpperCase(),
     visualElements: [
       'Fondo cinematográfico con gradiente oscuro',
@@ -446,7 +496,7 @@ async function generateYouTubeMetadata(verse) {
 
   console.log(`   🎯 Título generado:`);
   console.log(`      "${title}"`);
-  console.log(`      Longitud: ${title.length}/70 caracteres\n`);
+  console.log(`      Longitud: ${title.length}/50 caracteres (CORTO Y CON PUNCH)\n`);
 
   // ───────────────────────────────────────────────────────────────────
   // STEP 3: Generar descripción SEO-optimizada
@@ -485,12 +535,13 @@ async function generateYouTubeMetadata(verse) {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
   const youtubeCategory = 'Education'; // Categoría principal para contenido bíblico
-  const thumbnail = generateThumbnailRecommendation(verse, category);
+  const thumbnail = generateThumbnailRecommendation(verse, category, scriptText);
+  const thumbnailPhrase = thumbnail.textOverlay; // Extraer frase para metadata
   const pinnedComment = generatePinnedComment(verse, category);
 
   console.log(`   📂 Categoría: ${youtubeCategory}`);
   console.log(`   🖼️  Thumbnail:`);
-  console.log(`      Texto principal: "${thumbnail.textOverlay}"`);
+  console.log(`      Texto principal: "${thumbnailPhrase}"`);
   console.log(`      Texto secundario: "${thumbnail.secondaryText}"`);
   console.log(`      Color primario: ${thumbnail.colorScheme.primary}`);
   console.log(`   💬 Pinned comment generado (${pinnedComment.length} chars)\n`);
@@ -506,6 +557,9 @@ async function generateYouTubeMetadata(verse) {
     verse: verse,
     category: category,
     videoId: videoMetadata.videoId || `script-${verseForFilename}`,
+
+    // Frase optimizada para thumbnail (usada por Agent-9)
+    thumbnailPhrase: thumbnailPhrase,
 
     // Metadata principal para YouTube API
     youtube: {
@@ -574,7 +628,7 @@ async function generateYouTubeMetadata(verse) {
   console.log('════════════════════════════════════════════════════════════════\n');
 
   console.log(`📊 RESUMEN:`);
-  console.log(`   Título: ${title.length}/70 chars ✅`);
+  console.log(`   Título: ${title.length}/50 chars ✅ (CORTO Y CON PUNCH)`);
   console.log(`   Descripción: ${description.length}/5000 chars ✅`);
   console.log(`   Tags: ${tags.length}/30 ✅`);
   console.log(`   Categoría: ${youtubeCategory} ✅`);

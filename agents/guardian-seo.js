@@ -19,7 +19,7 @@ const BASE_DELAY_MS = 2000;
 const MAX_DELAY_MS = 30000;
 const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutos
 
-const SEO_METADATA_DIR = path.join(__dirname, '..', 'output', 'seo-metadata');
+const SEO_METADATA_DIR = path.join(__dirname, '..', 'output', 'youtube-metadata');
 
 // Límites de YouTube
 const YOUTUBE_LIMITS = {
@@ -169,35 +169,38 @@ class SEOGuardian {
       };
     }
 
+    // Agent-8 guarda datos en metadata.youtube.*
+    const youtube = metadata.youtube || {};
+
     // Verificar título
-    if (!metadata.title || metadata.title.trim() === '') {
+    if (!youtube.title || youtube.title.trim() === '') {
       issues.push('missing_title');
-    } else if (metadata.title.length > YOUTUBE_LIMITS.TITLE_MAX) {
-      issues.push(`title_too_long: ${metadata.title.length}/${YOUTUBE_LIMITS.TITLE_MAX} chars`);
+    } else if (youtube.title.length > YOUTUBE_LIMITS.TITLE_MAX) {
+      issues.push(`title_too_long: ${youtube.title.length}/${YOUTUBE_LIMITS.TITLE_MAX} chars`);
     }
 
     // Verificar descripción
-    if (!metadata.description || metadata.description.trim() === '') {
+    if (!youtube.description || youtube.description.trim() === '') {
       issues.push('missing_description');
-    } else if (metadata.description.length > YOUTUBE_LIMITS.DESCRIPTION_MAX) {
-      issues.push(`description_too_long: ${metadata.description.length}/${YOUTUBE_LIMITS.DESCRIPTION_MAX} chars`);
+    } else if (youtube.description.length > YOUTUBE_LIMITS.DESCRIPTION_MAX) {
+      issues.push(`description_too_long: ${youtube.description.length}/${YOUTUBE_LIMITS.DESCRIPTION_MAX} chars`);
     }
 
     // Verificar tags
-    if (!metadata.tags || metadata.tags.length === 0) {
+    if (!youtube.tags || youtube.tags.length === 0) {
       issues.push('missing_tags');
-    } else if (metadata.tags.length > YOUTUBE_LIMITS.TAGS_COUNT_MAX) {
-      issues.push(`too_many_tags: ${metadata.tags.length}/${YOUTUBE_LIMITS.TAGS_COUNT_MAX} tags`);
+    } else if (youtube.tags.length > YOUTUBE_LIMITS.TAGS_COUNT_MAX) {
+      issues.push(`too_many_tags: ${youtube.tags.length}/${YOUTUBE_LIMITS.TAGS_COUNT_MAX} tags`);
     } else {
-      const totalTagsLength = metadata.tags.join(', ').length;
+      const totalTagsLength = youtube.tags.join(', ').length;
       if (totalTagsLength > YOUTUBE_LIMITS.TAGS_MAX) {
         issues.push(`tags_text_too_long: ${totalTagsLength}/${YOUTUBE_LIMITS.TAGS_MAX} chars`);
       }
     }
 
-    // Verificar status
-    if (metadata.status && metadata.status !== 'completed') {
-      issues.push(`status=${metadata.status}`);
+    // Verificar thumbnailPhrase (campo nuevo agregado por Agent-8)
+    if (!metadata.thumbnailPhrase || metadata.thumbnailPhrase.trim() === '') {
+      issues.push('missing_thumbnailPhrase');
     }
 
     return {
@@ -267,9 +270,26 @@ class SEOGuardian {
   async executeRetry(strategy) {
     console.log(`\n🔧 Ejecutando retry para metadata SEO...`);
 
-    // TODO: Integrar con Agent 8 (YouTube SEO Expert)
-    // const agent8 = require('./agent-8-youtube-seo-expert.js');
-    // await agent8.generateSEO(this.verse);
+    // Ejecutar Agent 8 (YouTube SEO Expert con thumbnailPhrase)
+    const { execSync } = require('child_process');
+    const path = require('path');
+
+    try {
+      const result = execSync(
+        `node agents/agent-8-youtube-seo-expert.js "${this.verse}"`,
+        {
+          encoding: 'utf-8',
+          cwd: path.join(__dirname, '..'),
+          stdio: 'inherit'
+        }
+      );
+
+      console.log(`✅ Agent 8 completado`);
+
+      return { success: true };
+    } catch (error) {
+      throw new Error(`Agent 8 falló: ${error.message}`);
+    }
   }
 
   sleep(ms) {
@@ -278,6 +298,7 @@ class SEOGuardian {
 
   reportSuccess(result) {
     const duration = result.duration / 1000;
+    const youtube = result.metadata.youtube || {};
 
     console.log('\n╔' + '═'.repeat(58) + '╗');
     console.log('║' + ' '.repeat(15) + '✅ GUARDIAN: ÉXITO' + ' '.repeat(22) + '║');
@@ -286,9 +307,10 @@ class SEOGuardian {
     console.log(`   - Duración: ${duration.toFixed(2)}s`);
     console.log(`   - Reintentos: ${result.totalRetries}`);
     console.log(`\n📝 Metadata SEO:`);
-    console.log(`   - Título: "${result.metadata.title}" (${result.metadata.title?.length || 0} chars)`);
-    console.log(`   - Descripción: ${result.metadata.description?.length || 0} chars`);
-    console.log(`   - Tags: ${result.metadata.tags?.length || 0} tags`);
+    console.log(`   - Título: "${youtube.title}" (${youtube.title?.length || 0} chars)`);
+    console.log(`   - Descripción: ${youtube.description?.length || 0} chars`);
+    console.log(`   - Tags: ${youtube.tags?.length || 0} tags`);
+    console.log(`   - Thumbnail Phrase: "${result.metadata.thumbnailPhrase}"`);
     console.log(`\n📁 Metadata guardada en:`);
     console.log(`   ${SEO_METADATA_DIR}\n`);
   }
