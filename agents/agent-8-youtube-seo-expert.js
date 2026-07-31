@@ -83,7 +83,27 @@ const CATEGORY_KEYWORDS = {
     secondary: ['evangelio', 'fe en cristo', 'perdón de pecados', 'nueva vida'],
     emotions: ['culpa', 'pecado', 'vacío', 'búsqueda'],
     solutions: ['salvación en cristo', 'gracia de dios', 'perdón divino', 'vida nueva']
+  },
+  guía: {
+    primary: ['guía', 'dirección', 'sabiduría', 'consejo divino'],
+    secondary: ['camino de dios', 'decisiones', 'propósito', 'claridad'],
+    emotions: ['confusión', 'incertidumbre', 'dudas', 'pérdida'],
+    solutions: ['dirección de dios', 'sabiduría divina', 'guía del espíritu', 'propósito divino']
   }
+};
+
+// Fallback para categorías desconocidas
+const getKeywordsForCategory = (category) => {
+  if (CATEGORY_KEYWORDS[category]) {
+    return CATEGORY_KEYWORDS[category];
+  }
+  // Fallback genérico
+  return {
+    primary: ['fe', 'biblia', 'palabra de dios', 'versículos'],
+    secondary: ['promesas de dios', 'cristianismo', 'devocional', 'reflexión'],
+    emotions: ['búsqueda', 'necesidad', 'anhelo', 'esperanza'],
+    solutions: ['palabra de dios', 'promesas divinas', 'fe en cristo', 'confianza en dios']
+  };
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -144,7 +164,7 @@ function truncateText(text, maxLength) {
  * Formato: Preguntas o afirmaciones directas
  */
 function generateTitle(verse, category, scriptText) {
-  const keywords = CATEGORY_KEYWORDS[category] || CATEGORY_KEYWORDS.fortaleza;
+  const keywords = getKeywordsForCategory(category);
 
   // Seleccionar keywords relevantes del script
   const primaryKeyword = keywords.primary[0];
@@ -177,7 +197,7 @@ function generateTitle(verse, category, scriptText) {
  * Genera descripción completa SEO-optimizada (5000 chars max)
  */
 function generateDescription(verse, category, scriptText, audioDuration) {
-  const keywords = CATEGORY_KEYWORDS[category] || CATEGORY_KEYWORDS.fortaleza;
+  const keywords = getKeywordsForCategory(category);
 
   // Hook de apertura (150 chars - visible antes de "Mostrar más")
   const hook = `${verse} es una promesa de ${keywords.solutions[0]}. Si te falta ${keywords.primary[0]}, este versículo puede cambiarlo todo. Mira hasta el final.`;
@@ -285,7 +305,7 @@ Cada video es diseñado cuidadosamente para:
  * Genera tags estratégicos (25-30 tags)
  */
 function generateTags(verse, category) {
-  const keywords = CATEGORY_KEYWORDS[category] || CATEGORY_KEYWORDS.fortaleza;
+  const keywords = getKeywordsForCategory(category);
 
   // Tags broad (3-5)
   const broadTags = [
@@ -339,7 +359,7 @@ function generateTags(verse, category) {
  * Basada en las keywords de la categoría + promesa principal
  */
 function generateThumbnailPhrase(verse, category, scriptText) {
-  const keywords = CATEGORY_KEYWORDS[category] || CATEGORY_KEYWORDS.fortaleza;
+  const keywords = getKeywordsForCategory(category);
 
   // Templates de frases thumbnail (3-6 palabras, con PUNCH emocional)
   const phraseTemplates = [
@@ -385,7 +405,7 @@ function generateThumbnailPhrase(verse, category, scriptText) {
  * Genera recomendación de thumbnail
  */
 function generateThumbnailRecommendation(verse, category, scriptText) {
-  const keywords = CATEGORY_KEYWORDS[category] || CATEGORY_KEYWORDS.fortaleza;
+  const keywords = getKeywordsForCategory(category);
   const thumbnailPhrase = generateThumbnailPhrase(verse, category, scriptText);
 
   return {
@@ -415,7 +435,7 @@ function generateThumbnailRecommendation(verse, category, scriptText) {
  * Genera pinned comment para engagement
  */
 function generatePinnedComment(verse, category) {
-  const keywords = CATEGORY_KEYWORDS[category] || CATEGORY_KEYWORDS.fortaleza;
+  const keywords = getKeywordsForCategory(category);
 
   return `🙏 Si ${verse} tocó tu corazón hoy, déjame un AMÉN en los comentarios.
 
@@ -451,9 +471,9 @@ async function generateYouTubeMetadata(verse) {
   // Normalizar verse para búsqueda de archivos
   const verseForFilename = verse.replace(/[:\s]/g, '-');
 
-  // Buscar video metadata
+  // Buscar video metadata (acepta ambos patrones: videos-completed- y videos-)
   const videoMetadataFiles = fs.readdirSync(VIDEO_METADATA_DIR)
-    .filter(file => file.includes(verseForFilename) && file.startsWith('videos-completed'));
+    .filter(file => file.includes(verseForFilename) && (file.startsWith('videos-completed') || file.startsWith('videos-')));
 
   if (videoMetadataFiles.length === 0) {
     throw new Error(`No se encontró video metadata para el versículo: ${verse}`);
@@ -466,9 +486,9 @@ async function generateYouTubeMetadata(verse) {
   console.log(`      Clips completados: ${videoMetadata.completedClips}/${videoMetadata.totalClips}`);
   console.log(`      Duración total: ${videoMetadata.totalDuration}s\n`);
 
-  // Buscar audio metadata
+  // Buscar audio metadata (acepta ambos patrones: audio-spec- y audio-)
   const audioMetadataFiles = fs.readdirSync(AUDIO_METADATA_DIR)
-    .filter(file => file.includes(verseForFilename) && file.startsWith('audio-spec'));
+    .filter(file => file.includes(verseForFilename) && (file.startsWith('audio-spec') || file.startsWith('audio-')));
 
   if (audioMetadataFiles.length === 0) {
     throw new Error(`No se encontró audio metadata para el versículo: ${verse}`);
@@ -482,7 +502,17 @@ async function generateYouTubeMetadata(verse) {
   console.log(`      Duración: ${audioMetadata.estimatedDuration}s`);
   console.log(`      Texto: ${audioMetadata.textLength} caracteres\n`);
   const category = audioMetadata.category;
-  const scriptText = audioMetadata.fullText;
+
+  // Extraer fullText (compatible con ambos formatos)
+  let scriptText = audioMetadata.fullText;
+  if (!scriptText && audioMetadata.audio && Array.isArray(audioMetadata.audio)) {
+    // Formato producción: concatenar texto de todas las escenas
+    scriptText = audioMetadata.audio
+      .map(scene => scene.text || '')
+      .filter(text => text.trim() !== '')
+      .join('\n\n');
+  }
+
   const audioDuration = audioMetadata.estimatedDuration;
 
   // ───────────────────────────────────────────────────────────────────
@@ -593,7 +623,7 @@ async function generateYouTubeMetadata(verse) {
 
     // Analytics
     analytics: {
-      primaryKeywords: CATEGORY_KEYWORDS[category].primary,
+      primaryKeywords: getKeywordsForCategory(category).primary,
       targetAudience: `Personas buscando ${category} espiritual`,
       contentStyle: 'Educational, Inspirational, Cinematic',
       estimatedCTR: 'High (optimized title + thumbnail)',
