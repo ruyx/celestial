@@ -349,9 +349,30 @@ function generateTags(verse, category) {
     'palabra viva'
   ];
 
-  // Combinar y limitar a 30 tags
+  // Combinar tags por prioridad (broad > medium > long-tail > branded)
   const allTags = [...broadTags, ...mediumTags, ...longTailTags, ...brandedTags];
-  return allTags.slice(0, 30);
+
+  // Validar límite de YouTube: 500 caracteres totales
+  const MAX_TAGS_LENGTH = 500;
+  const filteredTags = [];
+  let currentLength = 0;
+
+  for (const tag of allTags) {
+    // Calcular longitud con separador (", ")
+    const tagLength = tag.length;
+    const separatorLength = filteredTags.length > 0 ? 2 : 0; // ", "
+    const totalLength = currentLength + separatorLength + tagLength;
+
+    if (totalLength <= MAX_TAGS_LENGTH && filteredTags.length < 30) {
+      filteredTags.push(tag);
+      currentLength = totalLength;
+    } else {
+      // Ya no caben más tags
+      break;
+    }
+  }
+
+  return filteredTags;
 }
 
 /**

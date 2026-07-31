@@ -1,0 +1,263 @@
+{
+  "name": "YouTube Video Pipeline - Complete",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.254.80.29:3100/guardian-seo",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "verse",
+              "value": "={{ $json.verse }}"
+            }
+          ]
+        }
+      },
+      "name": "1. Guardian SEO",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.success }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "SEO Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.254.80.29:3100/guardian-upload",
+        "options": {
+          "timeout": 2400000
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "verse",
+              "value": "={{ $node[\"1. Guardian SEO\"].json.verse }}"
+            }
+          ]
+        }
+      },
+      "name": "2. Guardian Upload",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.success }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Upload Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.254.80.29:3100/guardian-thumbnail",
+        "options": {
+          "timeout": 900000
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "verse",
+              "value": "={{ $node[\"2. Guardian Upload\"].json.verse }}"
+            },
+            {
+              "name": "videoId",
+              "value": "={{ $node[\"2. Guardian Upload\"].json.videoId }}"
+            }
+          ]
+        }
+      },
+      "name": "3. Guardian Thumbnail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.success }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Thumbnail Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "message": "=✅ Video completo en YouTube!\n\nVersículo: {{ $node[\"2. Guardian Upload\"].json.verse }}\nVideo ID: {{ $node[\"2. Guardian Upload\"].json.videoId }}\nURL: {{ $node[\"2. Guardian Upload\"].json.videoUrl }}\n\nTítulo: {{ $node[\"1. Guardian SEO\"].json.youtubeTitle }}\nTags: {{ $node[\"1. Guardian SEO\"].json.youtubeTags.length }} tags\nThumbnail: {{ $json.thumbnailUpdated ? 'Subido ✅' : 'Pendiente ⏳' }}"
+      },
+      "name": "Success Notification",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [1450, 200]
+    },
+    {
+      "parameters": {
+        "message": "=❌ Error en pipeline\n\nEtapa: {{ $json.stage || 'Unknown' }}\nVersículo: {{ $json.verse || 'N/A' }}\nError: {{ $json.error || 'Unknown error' }}"
+      },
+      "name": "Error Notification",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [1450, 400]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "verse",
+              "value": "Proverbios 3:5-6"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Start: Set Verse",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [50, 300]
+    }
+  ],
+  "connections": {
+    "Start: Set Verse": {
+      "main": [
+        [
+          {
+            "node": "1. Guardian SEO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. Guardian SEO": {
+      "main": [
+        [
+          {
+            "node": "SEO Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEO Success?": {
+      "main": [
+        [
+          {
+            "node": "2. Guardian Upload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Guardian Upload": {
+      "main": [
+        [
+          {
+            "node": "Upload Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Success?": {
+      "main": [
+        [
+          {
+            "node": "3. Guardian Thumbnail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Guardian Thumbnail": {
+      "main": [
+        [
+          {
+            "node": "Thumbnail Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Thumbnail Success?": {
+      "main": [
+        [
+          {
+            "node": "Success Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": null,
+  "meta": {
+    "instanceId": "project-yt-pipeline"
+  }
+}
