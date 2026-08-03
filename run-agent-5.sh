@@ -6,7 +6,9 @@
 
 set -e
 
-cd ~/ruy-projects/project-yt
+# Auto-detect project directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
 # Ejecutar Agent 5 con Claude Code MCP
 # Output va a stdout/stderr para que el caller lo capture

@@ -6,7 +6,9 @@
 
 set -e
 
-cd ~/ruy-projects/project-yt
+# Auto-detect project directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
 # Parámetro: versículo (requerido)
 VERSE="$1"

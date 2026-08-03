@@ -6,7 +6,9 @@
 
 set -e
 
-cd ~/ruy-projects/project-yt
+# Auto-detect project directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
 # Parámetro: versículo (requerido)
 VERSE="$1"
@@ -39,7 +41,7 @@ VIDEO_FOUND=false
 
 while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
   # Buscar el video final ESPECÍFICO del versículo
-  FINAL_VIDEO=$(find ~/ruy-projects/project-yt/output/final-videos/ -name "final-${VERSE_FILENAME}.mp4" -type f | sort | tail -1)
+  FINAL_VIDEO=$(find "$SCRIPT_DIR/output/final-videos/" -name "final-${VERSE_FILENAME}.mp4" -type f | sort | tail -1)
 
   if [ -n "$FINAL_VIDEO" ] && [ -s "$FINAL_VIDEO" ]; then
     # Verificar que el archivo tiene al menos 1MB (video compilado mínimo)
