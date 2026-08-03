@@ -1,217 +1,572 @@
-# 🚀 Quick Deployment Guide - Rey Celestial
+# 🚀 Deployment Guide - Autonomous YouTube Video Pipeline
 
-Guía rápida para deployar en Railway en 20 minutos.
+Complete guide to deploy the fully autonomous YouTube video generation pipeline.
+
+## 📋 Table of Contents
+
+1. [Architecture Overview](#architecture-overview)
+2. [Prerequisites](#prerequisites)
+3. [Step 1: FTP Storage Setup](#step-1-ftp-storage-setup)
+4. [Step 2: Supabase Database Setup](#step-2-supabase-database-setup)
+5. [Step 3: Vercel Edge Functions Deployment](#step-3-vercel-edge-functions-deployment)
+6. [Step 4: n8n Workflow Import](#step-4-n8n-workflow-import)
+7. [Step 5: Environment Variables](#step-5-environment-variables)
+8. [Step 6: YouTube OAuth Setup](#step-6-youtube-oauth-setup)
+9. [Testing & Verification](#testing--verification)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
-## 📋 Checklist Pre-Deployment
+## Architecture Overview
 
-Antes de empezar, asegúrate de tener:
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        n8n Orchestrator                             │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐            │
+│  │ Agent-1  │→ │ Agent-2  │→ │ Agent-3  │→ │ Agent-4  │            │
+│  │ Script   │  │ Images   │  │ Audio    │  │ Videos   │            │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘            │
+└─────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│                   Vercel Edge Functions (Cloud)                     │
+│  ┌──────────────────────────┐  ┌──────────────────────────┐         │
+│  │ Agent-7: Compile Video   │  │ Agent-9: Gen Thumbnail   │         │
+│  │ - ffmpeg compilation     │  │ - Extract frame          │         │
+│  │ - FTP upload             │  │ - Text overlay           │         │
+│  └──────────────────────────┘  └──────────────────────────┘         │
+└─────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│                         Storage Layer                               │
+│  ┌──────────────────────────┐  ┌──────────────────────────┐         │
+│  │ FTP Hosting (50 GB)      │  │ Supabase PostgreSQL      │         │
+│  │ - Videos (final.mp4)     │  │ - Pipeline tracking      │         │
+│  │ - Thumbnails (.jpg)      │  │ - Metadata storage       │         │
+│  └──────────────────────────┘  └──────────────────────────┘         │
+└─────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│                   Agent-10: YouTube Upload                          │
+│  - OAuth authentication                                             │
+│  - Metadata (title, description, tags)                              │
+│  - Thumbnail upload                                                 │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
-- [ ] Cuenta de Railway: https://railway.app (gratis con GitHub)
-- [ ] Cuenta de Supabase: https://supabase.com (proyecto creado)
-- [ ] YouTube credentials configurados (youtube-token.json generado)
-- [ ] Repositorio en GitHub (código pusheado)
+**Key Benefits:**
+- ✅ **100% Cloud-Based:** No dependencia de tu computadora
+- ✅ **Autonomous:** Se ejecuta completamente desatendido
+- ✅ **Scalable:** 50 GB FTP = ~4,000 videos
+- ✅ **Reliable:** Error handling + retry logic + tracking
+- ✅ **Cost-Effective:** Supabase gratis + Vercel gratis + FTP barato
 
 ---
 
-## ⚡ Deployment en 5 Pasos
+## Prerequisites
 
-### 1️⃣ Preparar Credenciales (5 min)
+### Required Accounts
+
+1. **FTP Hosting** ✅
+   - Host: `ftp.ruydejesus.com`
+   - User: `project-yt@project-yt.ruydejesus.com`
+   - Password: `Tera2Sira!`
+   - Storage: 50 GB
+
+2. **Supabase** (Free Tier)
+   - Sign up: https://supabase.com
+   - Create project: `project-yt`
+
+3. **Vercel** (Free Tier)
+   - Sign up: https://vercel.com
+   - Install CLI: `npm install -g vercel`
+
+4. **n8n** (Self-hosted)
+   - Already running on separate computer ✅
+
+5. **Magnific API**
+   - API credentials configured ✅
+
+6. **YouTube API**
+   - Google Cloud Project
+   - YouTube Data API v3 enabled
+   - OAuth credentials
+
+### Required Tools
 
 ```bash
-# Convertir YouTube token a base64
-cat youtube-token.json | base64 > youtube-token.b64
+# Install lftp for FTP setup
+sudo apt-get install lftp
 
-# Copiar el contenido
-cat youtube-token.b64
+# Install Supabase CLI
+npm install -g supabase
 
-# Guardar este valor para Railway
+# Install Vercel CLI
+npm install -g vercel
+
+# Verify installations
+lftp --version
+supabase --version
+vercel --version
 ```
 
 ---
 
-### 2️⃣ Push a GitHub (2 min)
+## Step 1: FTP Storage Setup
+
+### 1.1 Create Directory Structure
 
 ```bash
-# Verificar que .env NO está commiteado
-git status | grep .env  # No debe aparecer
+cd /home/suario/ruy-projects/project-yt
+chmod +x scripts/setup-ftp-structure.sh
+./scripts/setup-ftp-structure.sh
+```
 
-# Commit y push
-git add .
-git commit -m "Add Railway deployment configuration"
-git push origin main
+**Expected Output:**
+```
+✅ FTP Structure Setup Completado Exitosamente
+Directorios creados:
+  📁 /videos/{verse}/final.mp4
+  📁 /thumbnails/{verse}.jpg
+  📁 /logs/pipeline-{timestamp}.log
+```
+
+### 1.2 Verify FTP Access
+
+```bash
+lftp -u "project-yt@project-yt.ruydejesus.com,Tera2Sira!" ftp.ruydejesus.com
+lftp> ls
+lftp> cd videos
+lftp> ls
+lftp> bye
+```
+
+**Public URLs:**
+- Videos: `https://project-yt.ruydejesus.com/videos/{verse}/final.mp4`
+- Thumbnails: `https://project-yt.ruydejesus.com/thumbnails/{verse}.jpg`
+
+---
+
+## Step 2: Supabase Database Setup
+
+### 2.1 Link Supabase Project
+
+```bash
+cd /home/suario/ruy-projects/project-yt
+supabase login
+supabase link --project-ref <YOUR_PROJECT_REF>
+```
+
+### 2.2 Run Migration
+
+```bash
+supabase db push
+```
+
+This creates:
+- `video_pipeline_runs` - Main tracking table
+- `video_clips` - Individual clips tracking
+- `audio_generations` - Audio tracking
+- `pipeline_errors` - Error logging
+
+### 2.3 Verify Tables
+
+```bash
+supabase db query "SELECT tablename FROM pg_tables WHERE schemaname = 'public';"
+```
+
+**Expected Output:**
+```
+video_pipeline_runs
+video_clips
+audio_generations
+pipeline_errors
 ```
 
 ---
 
-### 3️⃣ Deploy en Railway (5 min)
+## Step 3: Vercel Edge Functions Deployment
 
-1. Ir a https://railway.app/dashboard
-2. Click **"New Project"** → **"Deploy from GitHub repo"**
-3. Seleccionar tu repositorio
-4. Railway detecta `Dockerfile` automáticamente
-5. Click **"Deploy Now"**
-
-⏳ Esperar 2-3 minutos mientras Railway hace el build...
-
----
-
-### 4️⃣ Configurar Variables de Entorno (5 min)
-
-En el dashboard de Railway:
-
-1. Ir a **Settings** → **Variables**
-2. Click **"New Variable"** para cada una:
+### 3.1 Project Setup
 
 ```bash
-NODE_ENV=production
-SUPABASE_URL=https://tu-proyecto.supabase.co
-SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-YOUTUBE_CLIENT_ID=123456789-abc.apps.googleusercontent.com
-YOUTUBE_CLIENT_SECRET=GOCSPX-abc123
-YOUTUBE_TOKEN_BASE64=(pegar contenido de youtube-token.b64)
+cd /home/suario/ruy-projects/project-yt
+vercel login
+vercel link
 ```
 
-⚠️ Railway redespliega automáticamente al agregar variables.
+### 3.2 Install Dependencies
 
----
+Create `vercel-functions/package.json`:
 
-### 5️⃣ Configurar GitHub Actions Cron (3 min)
-
-En GitHub:
-
-1. Ir a **Settings** → **Secrets and variables** → **Actions**
-2. Click **"New repository secret"**
-3. Agregar las mismas variables que en Railway:
-   - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_KEY`
-   - `YOUTUBE_CLIENT_ID`
-   - `YOUTUBE_CLIENT_SECRET`
-   - `YOUTUBE_TOKEN_BASE64`
-
-✅ Ya creamos el workflow en `.github/workflows/analytics-weekly.yml`
-
----
-
-## ✅ Verificar Deployment
-
-### Railway Dashboard
-
-```bash
-# Ver logs en tiempo real
-1. Ir a proyecto en Railway
-2. Click en deployment activo
-3. Ver logs → Buscar "✅ Build completed"
+```json
+{
+  "name": "project-yt-functions",
+  "version": "1.0.0",
+  "dependencies": {
+    "fluent-ffmpeg": "^2.1.2",
+    "basic-ftp": "^5.0.3",
+    "canvas": "^2.11.2"
+  }
+}
 ```
 
-### GitHub Actions
+```bash
+cd vercel-functions
+npm install
+```
+
+### 3.3 Deploy Functions
 
 ```bash
-# Probar cron manualmente
-1. Ir a Actions tab en GitHub
-2. Seleccionar "Weekly Analytics Collection"
-3. Click "Run workflow" → "Run workflow"
-4. Ver logs en tiempo real
+vercel deploy --prod
+```
+
+**Functions Deployed:**
+- `/api/compile-and-upload` - Video compilation + FTP upload
+- `/api/generate-thumbnail` - Thumbnail generation + FTP upload
+
+**Save the deployment URL:**
+```
+https://project-yt-functions.vercel.app
 ```
 
 ---
 
-## 🎯 Próximos Pasos
+## Step 4: n8n Workflow Import
 
-Después del primer deployment:
+### 4.1 Open n8n Web UI
 
-1. **Esperar a que termine la metadata generation** (~25 horas)
-2. **Subir metadata a Supabase**:
-   ```bash
-   node scripts/prepare-cloud-database-openrouter.js --mode=upload
+Navigate to your n8n instance (running on separate computer).
+
+### 4.2 Import Workflow
+
+1. Click **"Workflows"** → **"Import from File"**
+2. Select: `/home/suario/ruy-projects/project-yt/n8n-workflow/youtube-video-pipeline.json`
+3. Click **"Import"**
+
+### 4.3 Configure Credentials
+
+**Magnific API:**
+- Type: HTTP Header Auth
+- Header Name: `Authorization`
+- Header Value: `Bearer <MAGNIFIC_API_KEY>`
+
+**Supabase:**
+- Type: Supabase
+- Project URL: `https://<PROJECT_REF>.supabase.co`
+- API Key: `<SUPABASE_ANON_KEY>`
+
+**YouTube OAuth:**
+- Type: YouTube OAuth2
+- Follow OAuth setup in Step 6
+
+### 4.4 Update Environment Variables
+
+In n8n Settings → Environment Variables:
+
+```
+VERCEL_COMPILE_URL=https://project-yt-functions.vercel.app
+FTP_PASSWORD=Tera2Sira!
+FTP_HOST=ftp.ruydejesus.com
+FTP_USER=project-yt@project-yt.ruydejesus.com
+```
+
+---
+
+## Step 5: Environment Variables
+
+### Vercel Environment Variables
+
+```bash
+vercel env add FTP_PASSWORD
+# Value: Tera2Sira!
+
+vercel env add FTP_HOST
+# Value: ftp.ruydejesus.com
+
+vercel env add FTP_USER
+# Value: project-yt@project-yt.ruydejesus.com
+
+vercel env add MAGNIFIC_API_KEY
+# Value: <YOUR_MAGNIFIC_API_KEY>
+```
+
+### n8n Environment Variables
+
+Add to n8n instance:
+
+```bash
+VERCEL_COMPILE_URL=https://project-yt-functions.vercel.app
+SUPABASE_URL=https://<PROJECT_REF>.supabase.co
+SUPABASE_ANON_KEY=<YOUR_ANON_KEY>
+```
+
+---
+
+## Step 6: YouTube OAuth Setup
+
+### 6.1 Create Google Cloud Project
+
+1. Go to: https://console.cloud.google.com
+2. Create new project: `project-yt-youtube`
+3. Enable **YouTube Data API v3**
+
+### 6.2 Create OAuth Credentials
+
+1. Go to: **APIs & Services** → **Credentials**
+2. Click: **Create Credentials** → **OAuth client ID**
+3. Application type: **Web application**
+4. Authorized redirect URIs:
    ```
-3. **Probar Agent 9 manualmente**:
-   ```bash
-   # Localmente
-   node agents/agent-9-analytics-collector.js --insights
-
-   # O desde GitHub Actions (workflow manual)
+   https://<YOUR_N8N_DOMAIN>/rest/oauth2-credential/callback
    ```
-4. **Monitorear primera ejecución automática** (próximo domingo 3:00 AM)
+5. Save **Client ID** and **Client Secret**
+
+### 6.3 Configure in n8n
+
+1. n8n → **Credentials** → **YouTube OAuth2**
+2. Enter Client ID and Client Secret
+3. Click **Connect** to authorize
+4. Grant permissions for YouTube upload
 
 ---
 
-## 📚 Documentación Completa
+## Testing & Verification
 
-- **Railway Deployment**: `docs/RAILWAY-DEPLOYMENT.md` (300+ líneas)
-- **Docker Setup**: `docs/DOCKER-SETUP.md` (400+ líneas)
-- **Supabase Setup**: `docs/SUPABASE-SETUP.md`
-- **Agent 9 Analytics**: `docs/AGENT-9-ANALYTICS.md`
-- **Cron Setup**: `docs/CRON-SETUP.md`
-
----
-
-## 🐛 Troubleshooting Rápido
-
-### Error: Build failed
+### Test 1: FTP Connectivity
 
 ```bash
-# Ver logs específicos en Railway
-railway logs
-
-# Verificar Dockerfile
-docker build -t test .
+./scripts/setup-ftp-structure.sh
 ```
 
-### Error: Variables not found
+Expected: ✅ Directories created successfully
+
+### Test 2: Supabase Connection
 
 ```bash
-# Verificar que todas las variables están en Railway
-# Settings → Variables → Ver lista completa
-
-# Verificar .env está en .gitignore
-cat .gitignore | grep .env
+supabase db query "SELECT COUNT(*) FROM video_pipeline_runs;"
 ```
 
-### Error: YouTube token expired
+Expected: `0` (empty table)
+
+### Test 3: Vercel Functions
 
 ```bash
-# Regenerar token
-node youtube-auth.js
+curl -X POST https://project-yt-functions.vercel.app/api/compile-and-upload \
+  -H "Content-Type: application/json" \
+  -d '{
+    "verse": "Test-1-1",
+    "clips": [],
+    "audio": {"url": ""}
+  }'
+```
 
-# Convertir a base64
-cat youtube-token.json | base64 > youtube-token.b64
+Expected: Error message (no clips provided) - confirms function is reachable
 
-# Actualizar en Railway
-# Settings → Variables → YOUTUBE_TOKEN_BASE64
+### Test 4: n8n Workflow
+
+1. Open workflow in n8n
+2. Click **"Execute Workflow"**
+3. Provide test input:
+   ```json
+   {
+     "verse": "Romanos-8-28",
+     "scriptId": "script-123.json"
+   }
+   ```
+4. Monitor execution logs
+
+---
+
+## End-to-End Test: Romanos 8:28
+
+### Prerequisites
+
+1. All 10 clips already generated and downloaded ✅
+2. Audio voiceover generated ✅
+3. All infrastructure deployed
+
+### Test Execution
+
+```bash
+# 1. Start n8n workflow
+curl -X POST https://<N8N_DOMAIN>/webhook/generate-video \
+  -H "Content-Type: application/json" \
+  -d '{
+    "verse": "Romanos-8-28",
+    "scriptId": "script-Romanos-8-28-1785147170361.json"
+  }'
+
+# 2. Monitor progress in Supabase
+watch -n 5 "supabase db query 'SELECT verse, status, current_agent FROM video_pipeline_runs ORDER BY created_at DESC LIMIT 5;'"
+
+# 3. Check FTP for final video
+lftp -u "project-yt@project-yt.ruydejesus.com,Tera2Sira!" ftp.ruydejesus.com -e "ls videos/Romanos-8-28; bye"
+
+# 4. Verify public URL
+curl -I https://project-yt.ruydejesus.com/videos/Romanos-8-28/final.mp4
+```
+
+### Expected Timeline
+
+- **Agent-2 (Images):** Already completed ✅
+- **Agent-3 (Audio):** Already completed ✅
+- **Agent-4 (Videos):** Already completed ✅
+- **Agent-7 (Compilation):** ~2-3 minutes
+- **Agent-9 (Thumbnail):** ~30 seconds
+- **Agent-10 (YouTube):** ~1-2 minutes
+
+**Total:** ~4-6 minutes from trigger to YouTube publication
+
+---
+
+## Troubleshooting
+
+### Issue: FTP Connection Failed
+
+**Symptoms:**
+```
+Error: Failed to connect to ftp.ruydejesus.com
+```
+
+**Solution:**
+```bash
+# Test FTP connectivity
+ping ftp.ruydejesus.com
+
+# Verify credentials
+lftp -u "project-yt@project-yt.ruydejesus.com,Tera2Sira!" ftp.ruydejesus.com
+
+# Check firewall
+sudo ufw status
 ```
 
 ---
 
-## 💰 Costos Estimados
+### Issue: Vercel Function Timeout
 
-**Railway Free Tier**: $5 crédito/mes
-- 1 contenedor 24/7: ~$3/mes
-- Dentro del free tier ✅
+**Symptoms:**
+```
+Error: Function execution timed out after 300s
+```
 
-**GitHub Actions**: Gratis
-- 2,000 minutos/mes gratis
-- Cron semanal usa ~10 min/mes ✅
-
-**Supabase Free Tier**: Gratis
-- 500MB DB + 1GB bandwidth ✅
-
-**Total**: $0-3/mes (todo dentro de free tiers)
+**Solution:**
+- Video compilation is too slow
+- Reduce video count or duration
+- Optimize ffmpeg settings in `compile-and-upload.ts`:
+  ```typescript
+  '-preset ultrafast',  // Instead of 'medium'
+  '-crf 28',            // Instead of 23 (lower quality, faster)
+  ```
 
 ---
 
-## ✨ ¡Deployment Completado!
+### Issue: Supabase Migration Failed
 
-Tu proyecto ahora está:
+**Symptoms:**
+```
+Error: relation "video_pipeline_runs" already exists
+```
 
-✅ **100% Portable** (Docker)
-✅ **Auto-deployable** (Railway + GitHub)
-✅ **Monitoreado** (Logs en Railway)
-✅ **Automatizado** (Cron via GitHub Actions)
-✅ **Cloud-ready** (Supabase + Railway)
+**Solution:**
+```bash
+# Drop existing tables
+supabase db query "DROP TABLE IF EXISTS video_pipeline_runs CASCADE;"
 
-**Tiempo total de setup**: ~20 minutos
-**Mantenimiento mensual**: 0 minutos (todo automático)
+# Re-run migration
+supabase db push
+```
 
-🎉 **¡Felicidades! El proyecto está production-ready.**
+---
+
+### Issue: n8n Workflow Stuck
+
+**Symptoms:**
+- Workflow execution hangs on "Wait for Videos to Complete"
+
+**Solution:**
+1. Check Magnific API status
+2. Verify `creations_wait` returns valid identifiers
+3. Check n8n logs:
+   ```bash
+   docker logs n8n-container
+   ```
+
+---
+
+### Issue: YouTube Upload Failed - Quota Exceeded
+
+**Symptoms:**
+```
+Error: The request cannot be completed because you have exceeded your quota
+```
+
+**Solution:**
+- YouTube API has daily quota limit (10,000 units)
+- Each upload = ~1,600 units
+- **Max ~6 videos per day**
+- Apply for quota increase: https://support.google.com/youtube/contact/yt_api_form
+
+---
+
+## Monitoring & Maintenance
+
+### Daily Checks
+
+```bash
+# Check pipeline runs today
+supabase db query "
+  SELECT verse, status, created_at
+  FROM video_pipeline_runs
+  WHERE created_at >= CURRENT_DATE
+  ORDER BY created_at DESC;
+"
+
+# Check FTP usage
+lftp -u "project-yt@project-yt.ruydejesus.com,Tera2Sira!" ftp.ruydejesus.com -e "du -sh; bye"
+
+# Check error log
+supabase db query "
+  SELECT agent, error_message, created_at
+  FROM pipeline_errors
+  WHERE created_at >= CURRENT_DATE
+  ORDER BY created_at DESC;
+"
+```
+
+### Weekly Cleanup
+
+```bash
+# Delete old temporary files from FTP
+lftp -u "project-yt@project-yt.ruydejesus.com,Tera2Sira!" ftp.ruydejesus.com -e "rm -rf temp/*; bye"
+
+# Archive old pipeline runs (>30 days)
+supabase db query "
+  DELETE FROM video_pipeline_runs
+  WHERE created_at < NOW() - INTERVAL '30 days'
+  AND status = 'completed';
+"
+```
+
+---
+
+## Next Steps
+
+1. ✅ Complete infrastructure deployment
+2. ✅ Run end-to-end test with Romanos 8:28
+3. 🔄 **Resume reliability & autonomy testing**
+4. 📊 Implement monitoring dashboard
+5. 🎯 Optimize for scale (batch processing)
+6. 🚀 Add more verses to queue
+
+---
+
+## Support & Documentation
+
+- **FTP Dashboard:** https://project-yt.ruydejesus.com
+- **Supabase Dashboard:** https://supabase.com/dashboard/project/<PROJECT_REF>
+- **Vercel Dashboard:** https://vercel.com/dashboard
+- **n8n Workflow:** Access via n8n web UI
+
+**Questions?** Review this guide or check the error logs in Supabase.

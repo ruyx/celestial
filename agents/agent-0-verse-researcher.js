@@ -21,10 +21,20 @@
  * - [ ] Implementar modos: exploration vs optimization
  */
 
+// WebSocket polyfill para Node.js 18
+if (typeof WebSocket === 'undefined') {
+  global.WebSocket = require('ws');
+}
+
 const fs = require('fs');
 const path = require('path');
-const { Anthropic } = require('@anthropic-ai/sdk');
+// Usamos OpenRouter en lugar de Anthropic SDK directo
+const { createClient } = require('@supabase/supabase-js');
 const { saveAgentDecision } = require('../lib/supabase-client');
+
+// Configuración Supabase para deduplicación
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qhlqrflccdgpslozzfyh.supabase.co';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // 🗄️ BASE DE DATOS TEMPORAL (MVP)
 // En producción, esto será reemplazado por SQLite con 31,102 versículos
@@ -157,10 +167,18 @@ class VerseResearcher {
     this.decisionFile = path.join(this.outputDir, 'agent-0-decision.json');
     this.usageTrackingFile = path.join(this.outputDir, 'verse-usage-tracking.json');
 
-    // Inicializar Anthropic API
-    this.anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY
-    });
+    // Usar OpenRouter en lugar de Anthropic SDK directo
+    this.openrouterApiKey = process.env.OPENROUTER_API_KEY;
+    this.openrouterUrl = 'https://openrouter.ai/api/v1/chat/completions';
+
+    // Inicializar Supabase client para deduplicación
+    if (SUPABASE_SERVICE_KEY) {
+      this.supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+      console.log('✅ Supabase client inicializado para deduplicación');
+    } else {
+      console.log('⚠️  SUPABASE_SERVICE_ROLE_KEY no configurada - deduplicación deshabilitada');
+      this.supabase = null;
+    }
 
     // Crear directorio de salida si no existe
     if (!fs.existsSync(this.outputDir)) {
@@ -207,6 +225,52 @@ class VerseResearcher {
   }
 
   /**
+   * 🚫 CONSULTAR VERSÍCULOS PUBLICADOS EN SUPABASE
+   * Retorna un Set de referencias de versículos ya publicados
+   */
+  async getPublishedVerses() {
+    // Si no hay cliente Supabase, retornar set vacío (deduplicación deshabilitada)
+    if (!this.supabase) {
+      console.log('⚠️  Deduplicación deshabilitada - SUPABASE_SERVICE_ROLE_KEY no configurada');
+      return new Set();
+    }
+
+    try {
+      console.log('🔍 Consultando versículos publicados en Supabase...');
+
+      const { data, error } = await this.supabase
+        .from('published_videos')
+        .select('verse')
+        .eq('status', 'published');
+
+      if (error) {
+        // PGRST116 = tabla no existe aún (migración no aplicada)
+        if (error.code === 'PGRST116' || error.code === '42P01') {
+          console.log('⚠️  Tabla published_videos no existe aún - deduplicación deshabilitada temporalmente');
+          console.log('   (Ejecuta la migración SQL para habilitar deduplicación)');
+          return new Set();
+        }
+        throw error;
+      }
+
+      const publishedSet = new Set(data.map(row => row.verse));
+      console.log(`✅ Encontrados ${publishedSet.size} versículos publicados`);
+
+      if (publishedSet.size > 0) {
+        console.log(`   Publicados: ${Array.from(publishedSet).join(', ')}`);
+      }
+
+      return publishedSet;
+
+    } catch (error) {
+      console.error(`❌ Error consultando published_videos:`, error.message);
+      console.log('⚠️  Continuando sin deduplicación por error de BD (fail-open)');
+      // Fail-open: Si falla la consulta, permitir continuar sin filtro
+      return new Set();
+    }
+  }
+
+  /**
    * 🔍 BUSCAR VERSÍCULO POR REFERENCIA
    * Usado para testing determinista con versículo específico
    */
@@ -225,8 +289,9 @@ class VerseResearcher {
    * 🎯 SELECCIÓN INTELIGENTE DE VERSÍCULO
    *
    * Algoritmo MVP:
-   * 1. Excluir versículos usados recientemente (menos de 7 días)
-   * 2. Priorizar versículos con:
+   * 1. Excluir versículos PUBLICADOS en YouTube (deduplicación crítica)
+   * 2. Excluir versículos usados recientemente (menos de 2 días)
+   * 3. Priorizar versículos con:
    *    - Alto viral potential
    *    - Bajo used count
    *    - Factor de aleatoriedad
@@ -235,18 +300,27 @@ class VerseResearcher {
    * - Modo EXPLORATION (20%): Probar versículos nuevos
    * - Modo OPTIMIZATION (80%): Usar patrones ganadores de analytics
    */
-  selectOptimalVerse() {
+  async selectOptimalVerse() {
     console.log('🔍 Seleccionando versículo óptimo...');
+
+    // 1. DEDUPLICACIÓN CRÍTICA: Consultar versículos ya publicados
+    const publishedVerses = await this.getPublishedVerses();
 
     // Filtrar versículos disponibles
     const now = new Date();
     const availableVerses = TEMP_VERSE_DATABASE.filter(verse => {
+      // ✅ FILTRO #1: Excluir versículos PUBLICADOS (evitar desperdiciar créditos)
+      if (publishedVerses.has(verse.reference)) {
+        console.log(`   🚫 "${verse.reference}" ya publicado - EXCLUIDO`);
+        return false;
+      }
+
       const tracking = this.usageTracking[verse.reference];
 
       // Si nunca se ha usado, está disponible
       if (!tracking.lastUsed) return true;
 
-      // Verificar si han pasado al menos 2 días desde el último uso
+      // ✅ FILTRO #2: Verificar si han pasado al menos 2 días desde el último uso
       const lastUsedDate = new Date(tracking.lastUsed);
       const daysSinceLastUse = (now - lastUsedDate) / (1000 * 60 * 60 * 24);
 
@@ -327,12 +401,23 @@ Genera un objeto JSON con:
    - Si bestHookType = "controversy": Plantea pregunta controversial que el versículo responde
    - Si bestHookType = "negative": Problema/dolor que el versículo resuelve
 
-2. **visualDescriptions** (objeto con 5 strings): Descripciones visuales ÚNICAS para este versículo específico (NO genéricas):
-   - hook: Visual que capte atención relacionado al hook (5s)
-   - intro: Contexto histórico visual específico de este versículo (25s)
-   - body: Visualización del mensaje central del versículo (45s)
-   - application: Aplicación personal visual práctica (25s)
-   - cta: Cierre inspirador visual relacionado al mensaje (20s)
+2. **visualDescriptions** (objeto con 5 strings): Descripciones visuales CINEMATOGRÁFICAS ÚNICAS con PERSONAJES, ESCENARIOS y ACCIONES concretas (NO genéricas como "cielo", "nubes", "luz"):
+
+   **FORMATO REQUERIDO PARA CADA DESCRIPCIÓN:**
+   - PERSONAJE: ¿Quién está en la escena? (pastor, pescador, madre orando, anciano leyendo, niño, mujer, soldado, etc.)
+   - ESCENARIO: ¿Dónde sucede? (templo antiguo, casa humilde, mercado, barca en mar, jardín, desierto, cueva, etc.)
+   - ACCIÓN: ¿Qué está haciendo? (orando con manos levantadas, abrazando a niño, caminando con báculo, leyendo pergamino, etc.)
+   - OBJETO SIMBÓLICO: ¿Qué objeto representa el mensaje? (cruz de madera, manos juntas, biblia abierta, lámpara de aceite, pan, agua, etc.)
+
+   **Ejemplo CORRECTO:** "Anciano pastor hebreo en túnica beige caminando por valle rocoso al amanecer, sosteniendo báculo de madera, rodeado de ovejas blancas, expresión de paz profunda"
+   **Ejemplo INCORRECTO:** "Cielo dramático con nubes y luz dorada" (demasiado genérico)
+
+   Genera estas 5 descripciones específicas:
+   - hook: Visual que capte atención relacionado al hook (5s) - DEBE incluir personaje + acción
+   - intro: Contexto histórico visual específico de este versículo (25s) - DEBE incluir escenario + personaje de la época
+   - body: Visualización del mensaje central del versículo (45s) - DEBE incluir personaje + objeto simbólico + acción
+   - application: Aplicación personal visual práctica (25s) - DEBE incluir persona moderna + acción concreta
+   - cta: Cierre inspirador visual relacionado al mensaje (20s) - DEBE incluir personaje + gesto final
 
 3. **historicalInsight** (string): Un insight histórico FASCINANTE sobre este versículo específico que la mayoría no conoce (2-3 frases). Debe ser sorprendente y memorable.
 
@@ -345,13 +430,29 @@ Genera un objeto JSON con:
 Responde SOLO con JSON válido, sin markdown, sin explicaciones adicionales.`;
 
     try {
-      const message = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-5-20250929',
-        max_tokens: 2048,
-        messages: [{ role: 'user', content: prompt }]
+      // Llamar a OpenRouter en lugar de Anthropic SDK directo
+      const response = await fetch(this.openrouterUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.openrouterApiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://retea.vercel.app',
+          'X-Title': 'Retea Video Generator - Agent 0'
+        },
+        body: JSON.stringify({
+          model: 'nvidia/nemotron-3-ultra-550b-a55b:free',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 2048
+        })
       });
 
-      const responseText = message.content[0].text;
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      const responseText = data.choices[0].message.content;
 
       // Limpiar posibles backticks de markdown
       const cleanedResponse = responseText
@@ -409,7 +510,7 @@ Responde SOLO con JSON válido, sin markdown, sin explicaciones adicionales.`;
       // Production mode: selección algorítmica autónoma
       const selectedVerse = targetVerse
         ? this.findVerseByReference(targetVerse)
-        : this.selectOptimalVerse();
+        : await this.selectOptimalVerse();
 
       if (targetVerse) {
         console.log(`🧪 MODO TESTING: Usando versículo especificado "${targetVerse}"`);

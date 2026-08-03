@@ -87,3 +87,4 @@ juan-*.mp4
 
 # Playlist IDs (no versionarlos)
 playlist-ids.json
+data/codex/

@@ -1,0 +1,241 @@
+{
+  "name": "YouTube VIRAL Production - v3.0 Execute Command",
+  "nodes": [
+    {
+      "id": "daily-trigger",
+      "name": "Daily Trigger (12:00 PM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "hours", "hoursInterval": 24}]
+        }
+      }
+    },
+    {
+      "id": "manual-trigger",
+      "name": "Manual Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 480],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "youtube-viral-manual",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "exec-agent-0",
+      "name": "Execute: Agent 0",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [440, 380],
+      "parameters": {
+        "command": "cd /home/suario/ruy-projects/project-yt && node agents/agent-0-verse-researcher.js"
+      }
+    },
+    {
+      "id": "read-agent-0",
+      "name": "Read: Agent 0 Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [620, 380],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const fs = require('fs');\nconst decisionPath = '/home/suario/ruy-projects/project-yt/output/agent-0-decision.json';\nconst decision = JSON.parse(fs.readFileSync(decisionPath, 'utf-8'));\n\nreturn [{\n  json: {\n    success: true,\n    verse: decision.selectedVerse.reference,\n    category: decision.selectedVerse.category,\n    metadata: decision.metadata\n  }\n}];"
+      }
+    },
+    {
+      "id": "exec-agent-1",
+      "name": "Execute: Agent 1",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [800, 380],
+      "parameters": {
+        "command": "cd /home/suario/ruy-projects/project-yt && node agents/agent-1-viral-scriptwriter.js"
+      }
+    },
+    {
+      "id": "exec-agent-2",
+      "name": "Execute: Agent 2",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [980, 380],
+      "parameters": {
+        "command": "cd /home/suario/ruy-projects/project-yt && node agents/agent-2-image-designer-pro.js"
+      }
+    },
+    {
+      "id": "exec-agent-3",
+      "name": "Execute: Agent 3",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1160, 380],
+      "parameters": {
+        "command": "cd /home/suario/ruy-projects/project-yt && node agents/agent-3-batch-generator.js"
+      }
+    },
+    {
+      "id": "exec-guardian-images",
+      "name": "Execute: Guardian Images",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1340, 380],
+      "parameters": {
+        "command": "=cd /home/suario/ruy-projects/project-yt && node agents/guardian-images.js \"{{ $json.verse }}\""
+      }
+    },
+    {
+      "id": "exec-guardian-videos",
+      "name": "Execute: Guardian Videos",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1520, 380],
+      "parameters": {
+        "command": "=cd /home/suario/ruy-projects/project-yt && node agents/guardian-videos.js \"{{ $json.verse }}\""
+      }
+    },
+    {
+      "id": "exec-guardian-audio",
+      "name": "Execute: Guardian Audio",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1700, 380],
+      "parameters": {
+        "command": "=cd /home/suario/ruy-projects/project-yt && node agents/guardian-audio.js \"{{ $json.verse }}\""
+      }
+    },
+    {
+      "id": "exec-guardian-final-video",
+      "name": "Execute: Guardian Final Video",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1880, 380],
+      "parameters": {
+        "command": "=cd /home/suario/ruy-projects/project-yt && node agents/guardian-final-video.js \"{{ $json.verse }}\""
+      }
+    },
+    {
+      "id": "exec-guardian-seo",
+      "name": "Execute: Guardian SEO",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2060, 380],
+      "parameters": {
+        "command": "=cd /home/suario/ruy-projects/project-yt && node agents/guardian-seo.js \"{{ $json.verse }}\""
+      }
+    },
+    {
+      "id": "read-seo-result",
+      "name": "Read: SEO Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2240, 380],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const fs = require('fs');\nconst verse = $input.first().json.verse;\nconst verseSlug = verse.replace(/[:\\s]/g, '-');\nconst metadataPath = `/home/suario/ruy-projects/project-yt/output/youtube-metadata/youtube-metadata-${verseSlug}.json`;\nconst metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));\n\nreturn [{\n  json: {\n    ...($input.first().json),\n    youtubeTitle: metadata.seoTitle,\n    youtubeDescription: metadata.description,\n    youtubeTags: metadata.tags\n  }\n}];"
+      }
+    },
+    {
+      "id": "exec-guardian-upload",
+      "name": "Execute: Guardian Upload",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2420, 380],
+      "parameters": {
+        "command": "=cd /home/suario/ruy-projects/project-yt && node agents/guardian-upload.js \"{{ $json.verse }}\""
+      }
+    },
+    {
+      "id": "read-upload-result",
+      "name": "Read: Upload Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2600, 380],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const fs = require('fs');\nconst verse = $input.first().json.verse;\nconst verseSlug = verse.replace(/[:\\s]/g, '-');\nconst uploadPath = `/home/suario/ruy-projects/project-yt/output/youtube-metadata/upload-result-${verseSlug}.json`;\nconst uploadData = JSON.parse(fs.readFileSync(uploadPath, 'utf-8'));\n\nreturn [{\n  json: {\n    ...($input.first().json),\n    videoId: uploadData.videoId,\n    videoUrl: uploadData.videoUrl,\n    uploadSuccess: true\n  }\n}];"
+      }
+    },
+    {
+      "id": "exec-guardian-thumbnail",
+      "name": "Execute: Guardian Thumbnail",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2780, 380],
+      "parameters": {
+        "command": "=cd /home/suario/ruy-projects/project-yt && node agents/guardian-thumbnail.js \"{{ $json.verse }}\" \"{{ $json.videoId }}\""
+      }
+    },
+    {
+      "id": "success-log",
+      "name": "Production Success",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [2960, 380],
+      "parameters": {
+        "values": {
+          "string": [
+            {"name": "status", "value": "✅ COMPLETED"},
+            {"name": "verse", "value": "={{ $json.verse }}"},
+            {"name": "videoUrl", "value": "={{ $json.videoUrl }}"}
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily Trigger (12:00 PM)": {
+      "main": [[{"node": "Execute: Agent 0", "type": "main", "index": 0}]]
+    },
+    "Manual Webhook": {
+      "main": [[{"node": "Execute: Agent 0", "type": "main", "index": 0}]]
+    },
+    "Execute: Agent 0": {
+      "main": [[{"node": "Read: Agent 0 Result", "type": "main", "index": 0}]]
+    },
+    "Read: Agent 0 Result": {
+      "main": [[{"node": "Execute: Agent 1", "type": "main", "index": 0}]]
+    },
+    "Execute: Agent 1": {
+      "main": [[{"node": "Execute: Agent 2", "type": "main", "index": 0}]]
+    },
+    "Execute: Agent 2": {
+      "main": [[{"node": "Execute: Agent 3", "type": "main", "index": 0}]]
+    },
+    "Execute: Agent 3": {
+      "main": [[{"node": "Execute: Guardian Images", "type": "main", "index": 0}]]
+    },
+    "Execute: Guardian Images": {
+      "main": [[{"node": "Execute: Guardian Videos", "type": "main", "index": 0}]]
+    },
+    "Execute: Guardian Videos": {
+      "main": [[{"node": "Execute: Guardian Audio", "type": "main", "index": 0}]]
+    },
+    "Execute: Guardian Audio": {
+      "main": [[{"node": "Execute: Guardian Final Video", "type": "main", "index": 0}]]
+    },
+    "Execute: Guardian Final Video": {
+      "main": [[{"node": "Execute: Guardian SEO", "type": "main", "index": 0}]]
+    },
+    "Execute: Guardian SEO": {
+      "main": [[{"node": "Read: SEO Result", "type": "main", "index": 0}]]
+    },
+    "Read: SEO Result": {
+      "main": [[{"node": "Execute: Guardian Upload", "type": "main", "index": 0}]]
+    },
+    "Execute: Guardian Upload": {
+      "main": [[{"node": "Read: Upload Result", "type": "main", "index": 0}]]
+    },
+    "Read: Upload Result": {
+      "main": [[{"node": "Execute: Guardian Thumbnail", "type": "main", "index": 0}]]
+    },
+    "Execute: Guardian Thumbnail": {
+      "main": [[{"node": "Production Success", "type": "main", "index": 0}]]
+    }
+  }
+}

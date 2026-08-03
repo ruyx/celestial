@@ -80,14 +80,14 @@ async function generateVideoBatch(imageMetadataPath) {
 
   console.log(`📖 Video: ${imageMetadata.verse}`);
   console.log(`🎭 Categoría: ${imageMetadata.category}`);
-  console.log(`🖼️  Imágenes: ${imageMetadata.images.length}`);
+  console.log(`🖼️  Imágenes: ${imageMetadata.scenes.length}`);
   console.log(`🎬 Estilo: ${imageMetadata.cinematicStyle.styleReference}\n`);
 
   const videoClips = [];
   let clipIndex = 1;
 
   // Para cada imagen, crear clips de video
-  for (const image of imageMetadata.images) {
+  for (const image of imageMetadata.scenes) {
     const { sceneId, type, identifier, url, duration } = image;
 
     console.log(`\n🎬 Escena ${sceneId}: ${type.toUpperCase()} (${duration}s)`);
@@ -147,8 +147,8 @@ async function generateVideoBatch(imageMetadataPath) {
     createdAt: new Date().toISOString()
   };
 
-  // Guardar especificación
-  const specFile = `video-batch-${imageMetadata.verse.replace(/[:\s]/g, '-')}-${Date.now()}.json`;
+  // Guardar especificación (nombre compatible con test script)
+  const specFile = `video-${imageMetadata.verse.replace(/[:\s]/g, '-')}-${Date.now()}.json`;
   const specPath = path.join(VIDEO_METADATA_DIR, specFile);
   fs.writeFileSync(specPath, JSON.stringify(batchSpec, null, 2));
 
@@ -178,7 +178,7 @@ if (require.main === module) {
   try {
     // Buscar metadata de imágenes más reciente
     const files = fs.readdirSync(IMAGES_METADATA_DIR)
-      .filter(f => f.startsWith('images-metadata-') && f.endsWith('.json'))
+      .filter(f => f.startsWith('images-') && f.endsWith('.json'))
       .map(f => ({
         name: f,
         path: path.join(IMAGES_METADATA_DIR, f),

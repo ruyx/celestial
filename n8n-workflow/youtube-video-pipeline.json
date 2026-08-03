@@ -1,0 +1,529 @@
+{
+  "name": "YouTube Video Pipeline - Autonomous",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-video",
+        "options": {}
+      },
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "project-yt-generate",
+      "id": "node-webhook"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Agent-1: Script Planner\n// Recibe: { verse: \"Romanos 8:28\", scriptId: \"script-123.json\" }\n// Retorna: Estructura de 10 clips con prompts, duraciones, camera motions\n\nconst verse = $input.item.json.verse;\nconst scriptPath = `/home/suario/ruy-projects/project-yt/output/scripts/${verse}-script.json`;\n\n// Leer script generado por Agent-1\nconst script = JSON.parse(await $exec('cat', [scriptPath]));\n\nreturn {\n  json: {\n    verse,\n    scriptId: script.scriptId,\n    totalClips: script.clips.length,\n    totalDuration: script.totalDuration,\n    clips: script.clips,\n    audioScript: script.audioScript\n  }\n};"
+      },
+      "name": "Agent-1: Load Script",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "id": "node-agent1"
+    },
+    {
+      "parameters": {
+        "url": "=https://mcp.magnific.com/images/generate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "magnificApi",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $json.prompt }}"
+            },
+            {
+              "name": "mode",
+              "value": "imagen-nano-banana-2-flash"
+            },
+            {
+              "name": "aspectRatio",
+              "value": "9:16"
+            },
+            {
+              "name": "count",
+              "value": 1
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Agent-2: Generate Images (Loop)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 200],
+      "id": "node-agent2",
+      "notes": "Genera 10 imágenes para los 10 clips"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "Split Clips for Image Generation",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 2,
+      "position": [650, 300],
+      "id": "node-split-clips"
+    },
+    {
+      "parameters": {
+        "url": "=https://mcp.magnific.com/audio/tts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "magnificApi",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.audioScript }}"
+            },
+            {
+              "name": "model",
+              "value": "eleven_v3"
+            },
+            {
+              "name": "voiceId",
+              "value": 228
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Agent-3: Generate Voiceover",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 400],
+      "id": "node-agent3"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "name": "Merge Images + Audio",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [850, 300],
+      "id": "node-merge1"
+    },
+    {
+      "parameters": {
+        "url": "=https://mcp.magnific.com/video/generate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "magnificApi",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "video.clips[0].slug",
+              "value": "bytedance-seedance-pro-2.0"
+            },
+            {
+              "name": "video.clips[0].prompt",
+              "value": "={{ $json.prompt }}"
+            },
+            {
+              "name": "video.clips[0].duration",
+              "value": "={{ $json.duration }}"
+            },
+            {
+              "name": "video.clips[0].cameraMotion",
+              "value": "={{ $json.cameraMotion }}"
+            },
+            {
+              "name": "video.clips[0].keyframes.start.type",
+              "value": "image"
+            },
+            {
+              "name": "video.clips[0].keyframes.start.url",
+              "value": "={{ $json.imageIdentifier }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Agent-4: Generate Videos (Loop)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1050, 300],
+      "id": "node-agent4",
+      "notes": "Genera 10 videos con Seedance Pro 2.0"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "url": "=https://mcp.magnific.com/creations/wait",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "magnificApi",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "identifiers",
+              "value": "={{ $json.identifiers }}"
+            },
+            {
+              "name": "timeoutSeconds",
+              "value": 25
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Wait for Videos to Complete",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1250, 300],
+      "id": "node-wait-videos",
+      "notes": "Espera hasta que todos los 10 videos estén listos"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.VERCEL_COMPILE_URL }}/api/compile-and-upload",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "verse",
+              "value": "={{ $json.verse }}"
+            },
+            {
+              "name": "clips",
+              "value": "={{ $json.clips }}"
+            },
+            {
+              "name": "audio.url",
+              "value": "={{ $json.audioUrl }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "name": "Agent-7: Compile & Upload to FTP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1450, 300],
+      "id": "node-agent7",
+      "notes": "Vercel Edge Function: ffmpeg compilation + FTP upload"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.VERCEL_COMPILE_URL }}/api/generate-thumbnail",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "verse",
+              "value": "={{ $json.verse }}"
+            },
+            {
+              "name": "videoUrl",
+              "value": "={{ $json.publicUrl }}"
+            },
+            {
+              "name": "extractTimeSeconds",
+              "value": 3
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "name": "Agent-9: Generate Thumbnail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1650, 300],
+      "id": "node-agent9",
+      "notes": "Vercel Edge Function: extract frame + text overlay + FTP upload"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "video_pipeline_runs",
+        "columns": "verse,video_url,thumbnail_url,duration,file_size,status,created_at",
+        "additionalFields": {}
+      },
+      "name": "Save Metadata to Supabase",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1850, 300],
+      "id": "node-supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "videoUrl": "={{ $json.publicUrl }}",
+        "title": "={{ $json.verse }} - Versículo del Día",
+        "description": "={{ $json.verse }}\\n\\nSíguenos para más versículos diarios inspiradores.\\n\\n#Biblia #Versículos #Fe",
+        "thumbnailUrl": "={{ $json.thumbnailUrl }}",
+        "categoryId": "22",
+        "privacyStatus": "public",
+        "tags": "biblia,versículos,fe,cristianismo"
+      },
+      "name": "Agent-10: Upload to YouTube",
+      "type": "n8n-nodes-base.youtube",
+      "typeVersion": 1,
+      "position": [2050, 300],
+      "id": "node-agent10",
+      "credentials": {
+        "youtubeOAuth2Api": {
+          "id": "1",
+          "name": "YouTube OAuth"
+        }
+      },
+      "notes": "Sube el video final a YouTube con metadata completa"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "verse",
+              "value": "={{ $json.verse }}"
+            },
+            {
+              "name": "videoUrl",
+              "value": "={{ $json.publicUrl }}"
+            },
+            {
+              "name": "youtubeUrl",
+              "value": "={{ $json.youtubeUrl }}"
+            },
+            {
+              "name": "status",
+              "value": "completed"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Final Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [2250, 300],
+      "id": "node-response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.status }}",
+              "operation": "equals",
+              "value2": "failed"
+            }
+          ]
+        }
+      },
+      "name": "Check for Errors",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1050, 500],
+      "id": "node-error-check"
+    },
+    {
+      "parameters": {
+        "message": "=Pipeline failed at {{ $json.failedAgent }}: {{ $json.error }}",
+        "additionalFields": {
+          "verse": "={{ $json.verse }}",
+          "timestamp": "={{ $now }}",
+          "retryable": "={{ $json.retryable }}"
+        }
+      },
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1050, 650],
+      "id": "node-error-handler"
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Agent-1: Load Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent-1: Load Script": {
+      "main": [
+        [
+          {
+            "node": "Split Clips for Image Generation",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Agent-3: Generate Voiceover",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Clips for Image Generation": {
+      "main": [
+        [
+          {
+            "node": "Agent-2: Generate Images (Loop)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent-2: Generate Images (Loop)": {
+      "main": [
+        [
+          {
+            "node": "Merge Images + Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent-3: Generate Voiceover": {
+      "main": [
+        [
+          {
+            "node": "Merge Images + Audio",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Images + Audio": {
+      "main": [
+        [
+          {
+            "node": "Agent-4: Generate Videos (Loop)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent-4: Generate Videos (Loop)": {
+      "main": [
+        [
+          {
+            "node": "Wait for Videos to Complete",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check for Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Videos to Complete": {
+      "main": [
+        [
+          {
+            "node": "Agent-7: Compile & Upload to FTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent-7: Compile & Upload to FTP": {
+      "main": [
+        [
+          {
+            "node": "Agent-9: Generate Thumbnail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent-9: Generate Thumbnail": {
+      "main": [
+        [
+          {
+            "node": "Save Metadata to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Metadata to Supabase": {
+      "main": [
+        [
+          {
+            "node": "Agent-10: Upload to YouTube",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent-10: Upload to YouTube": {
+      "main": [
+        [
+          {
+            "node": "Final Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Errors": {
+      "main": [
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-07-28T00:00:00.000Z",
+  "versionId": "1"
+}

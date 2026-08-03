@@ -195,9 +195,9 @@ class ImageGuardian {
         issues.push('missing_url');
       }
 
-      // Verificar identifier
-      if (!img.identifier || img.identifier.trim() === '') {
-        issues.push('missing_identifier');
+      // Verificar creationIdentifier (Agent 4 genera 'creationIdentifier', no 'identifier')
+      if (!img.creationIdentifier || img.creationIdentifier.trim() === '') {
+        issues.push('missing_creationIdentifier');
       }
 
       // Verificar error messages

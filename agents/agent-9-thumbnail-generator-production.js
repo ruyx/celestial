@@ -347,8 +347,8 @@ class ThumbnailGenerator {
       // STEP 2: Cargar metadata
       const metadata = await this.loadMetadata();
 
-      // STEP 3: Generar prompt para imagen base
-      const basePrompt = this.generateBaseImagePrompt(metadata.category);
+      // STEP 3: Generar prompt para imagen base - ACTUALIZADO: usa thumbnailDescription
+      const basePrompt = this.generateBaseImagePrompt(metadata);
 
       // STEP 4: Retornar especificaciones para Claude Code
       const result = this.prepareResult(metadata, basePrompt);
@@ -439,16 +439,28 @@ class ThumbnailGenerator {
     return metadata;
   }
 
-  generateBaseImagePrompt(category) {
+  generateBaseImagePrompt(metadata) {
     const stepStart = Date.now();
     this.logger.info('STEP 3: Generando prompt para imagen base');
 
+    const category = metadata.category;
     const template = CATEGORY_TEMPLATES[category];
+
+    // ✅ NUEVO: Usar thumbnailDescription de Agent 1 si existe
+    let subjectDescription;
+    if (metadata.thumbnailDescription && metadata.thumbnailDescription.subject) {
+      subjectDescription = metadata.thumbnailDescription.subject;
+      this.logger.success('Usando thumbnailDescription específica de Agent 1');
+    } else {
+      // Fallback a template hardcoded si no hay thumbnailDescription
+      subjectDescription = `Close-up portrait of peaceful Hispanic person in their 40s, ${template.emotion}, ${template.faceLook}, authentic expression (NOT stock photo), professional photography quality, ${template.sceneDescription}`;
+      this.logger.warning('thumbnailDescription no encontrada, usando template por categoría');
+    }
 
     const prompt = `Professional cinematic photograph for YouTube thumbnail, 16:9 aspect ratio, photorealistic quality:
 
 SUBJECT (${template.facePosition}):
-Close-up portrait of peaceful Hispanic person in their 40s, ${template.emotion}, ${template.faceLook}, authentic expression (NOT stock photo), professional photography quality, ${template.sceneDescription}.
+${subjectDescription}, authentic expression (NOT stock photo), professional photography quality.
 
 BACKGROUND (remaining 60-70% of frame):
 ${template.backgroundColor}, simple clean composition, biblical/spiritual atmosphere, subject is 30% brighter than background for high contrast, ${category} theme.
@@ -471,6 +483,7 @@ IMPORTANT: NO TEXT, NO WORDS, NO LETTERS anywhere in the image. Clean space for 
 
     this.logger.success('Prompt generado', {
       category,
+      hasThumbnailDescription: !!metadata.thumbnailDescription,
       promptLength: prompt.length
     });
 
@@ -489,7 +502,7 @@ IMPORTANT: NO TEXT, NO WORDS, NO LETTERS anywhere in the image. Clean space for 
       basePrompt,
       outputPaths: {
         base: path.join(CONFIG.THUMBNAILS_DIR, `base-${verseForFilename}.png`),
-        final: path.join(CONFIG.THUMBNAILS_DIR, `thumbnail-${verseForFilename}.png`)
+        final: path.join(CONFIG.THUMBNAILS_DIR, `thumbnail-${verseForFilename}.jpg`)
       },
       nextSteps: {
         description: 'Claude Code debe generar la imagen base con Magnific MCP',
@@ -578,14 +591,29 @@ async function continueWithBaseImage(verse, baseImageUrl, metadata) {
       }
     );
 
-    // STEP 2: Componer con texto usando compose-thumbnail.js
-    logger.info('Componiendo texto con Sharp');
+    // STEP 2: Obtener frase optimizada del metadata (generada por Agent-8)
+    logger.info('Obteniendo frase para thumbnail');
 
-    const composeScript = path.join(__dirname, '..', 'compose-thumbnail.js');
+    if (!metadata.thumbnailPhrase) {
+      throw new Error('metadata.thumbnailPhrase no existe. Ejecutar Agent-8 primero.');
+    }
+
+    const phrase = metadata.thumbnailPhrase;
+    logger.success('Frase thumbnail obtenida', {
+      phrase,
+      length: phrase.length,
+      wordCount: phrase.split(' ').length
+    });
+
+    // STEP 3: Componer con texto usando Pillow V2 (Python - word wrapping + área segura)
+    logger.info('Componiendo thumbnail con Pillow V2');
+
+    const composeScript = path.join(__dirname, '..', 'compose-thumbnail-pillow-v2.py');
+    const finalPath = path.join(CONFIG.THUMBNAILS_DIR, `thumbnail-${verseForFilename}.jpg`);
 
     await RetryHandler.withRetry(
       async () => {
-        execSync(`node "${composeScript}" "${verse}"`, {
+        execSync(`python3 "${composeScript}" "${baseImagePath}" "${phrase}" "${metadata.category}" "${finalPath}"`, {
           cwd: path.join(__dirname, '..'),
           stdio: 'inherit',
           timeout: CONFIG.COMPOSE_TIMEOUT_MS
@@ -594,12 +622,10 @@ async function continueWithBaseImage(verse, baseImageUrl, metadata) {
       {
         maxRetries: 2,
         delayMs: 1000,
-        operationName: 'Composición de texto',
+        operationName: 'Composición de texto Pillow',
         logger
       }
     );
-
-    const finalPath = path.join(CONFIG.THUMBNAILS_DIR, `thumbnail-${verseForFilename}.png`);
 
     // Validar que el archivo final existe
     if (!fs.existsSync(finalPath)) {
@@ -648,19 +674,27 @@ async function healthCheck() {
             fs.existsSync(CONFIG.YOUTUBE_METADATA_DIR) ? 'OK' : 'FAIL'
   });
 
-  // Check 2: compose-thumbnail.js existe
-  const composeScript = path.join(__dirname, '..', 'compose-thumbnail.js');
+  // Check 2: compose-thumbnail-pillow-v2.py existe
+  const composeScript = path.join(__dirname, '..', 'compose-thumbnail-pillow-v2.py');
   checks.push({
-    name: 'compose-thumbnail.js',
+    name: 'compose-thumbnail-pillow-v2.py',
     status: fs.existsSync(composeScript) ? 'OK' : 'FAIL'
   });
 
-  // Check 3: Node modules
+  // Check 3: Python 3 disponible
   try {
-    require('sharp');
-    checks.push({ name: 'sharp module', status: 'OK' });
+    execSync('python3 --version', { stdio: 'pipe' });
+    checks.push({ name: 'Python 3', status: 'OK' });
   } catch {
-    checks.push({ name: 'sharp module', status: 'FAIL' });
+    checks.push({ name: 'Python 3', status: 'FAIL' });
+  }
+
+  // Check 4: Pillow instalado
+  try {
+    execSync('python3 -c "import PIL"', { stdio: 'pipe' });
+    checks.push({ name: 'Pillow (PIL)', status: 'OK' });
+  } catch {
+    checks.push({ name: 'Pillow (PIL)', status: 'FAIL' });
   }
 
   const allOk = checks.every(c => c.status === 'OK');

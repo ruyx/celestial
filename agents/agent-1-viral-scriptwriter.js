@@ -20,10 +20,15 @@
 
 const fs = require('fs');
 const path = require('path');
+const {
+  getLatestAgentDecision,
+  getLatestAnalyticsFeedback,
+  saveGeneratedScript
+} = require('../lib/supabase-client');
 
-// ✅ REFACTORIZACIÓN: Agent 1 ahora usa decisiones de Agent 0
-// ❌ ELIMINADO: MASTER_VERSES hardcoded array
-// ✅ NUEVO: loadAgent0Decision() carga decisión desde output/agent-0-decision.json
+// ✅ MIGRACIÓN A SUPABASE: Agent 1 ahora lee/escribe desde Supabase Database
+// ❌ ELIMINADO: Dependencias de filesystem para datos (solo para directorios)
+// ✅ NUEVO: Usa Supabase para decisiones, feedback y scripts generados
 
 class ViralScriptwriterAgent {
   constructor() {
@@ -37,28 +42,47 @@ class ViralScriptwriterAgent {
     }
   }
 
-  // ✅ REFACTORIZACIÓN: Cargar decisión de Agent 0 en lugar de MASTER_VERSES
-  loadAgent0Decision() {
-    console.log('📥 Cargando decisión de Agent 0...');
-    const decisionPath = path.join(__dirname, '../output/agent-0-decision.json');
+  // ✅ MIGRACIÓN A SUPABASE: Cargar decisión de Agent 0 desde base de datos
+  async loadAgent0Decision() {
+    console.log('📥 Cargando decisión de Agent 0 desde Supabase...');
 
-    if (!fs.existsSync(decisionPath)) {
+    const decision = await getLatestAgentDecision();
+
+    if (!decision) {
       throw new Error(`
 ❌ Agent 0 no ha ejecutado todavía.
 
 Por favor ejecuta primero:
   node agents/agent-0-verse-researcher.js
 
-Esto generará la decisión en: ${decisionPath}
+Esto guardará la decisión en Supabase Database (tabla agent_decisions).
       `);
     }
 
-    const decision = JSON.parse(fs.readFileSync(decisionPath, 'utf-8'));
-    console.log(`✅ Versículo cargado: ${decision.reference}`);
-    console.log(`   Categoría: ${decision.category}`);
-    console.log(`   Potencial viral: ${decision.viralPotential}/10`);
+    // Convertir nombres de columnas snake_case a camelCase
+    const normalizedDecision = {
+      id: decision.id, // ✅ FIX: Usar el ID de Supabase, no verse_id
+      reference: decision.reference,
+      text: decision.text,
+      category: decision.category,
+      customHook: decision.custom_hook,
+      historicalInsight: decision.historical_insight,
+      visualDescriptions: decision.visual_descriptions,
+      targetAudience: decision.target_audience,
+      keywords: decision.keywords,
+      historicalContext: decision.historical_context,
+      emotionalBenefit: decision.emotional_benefit,
+      bestHookType: decision.best_hook_type,
+      searchVolume: decision.search_volume,
+      competitionLevel: decision.competition_level,
+      viralPotential: decision.viral_potential
+    };
 
-    return decision;
+    console.log(`✅ Versículo cargado: ${normalizedDecision.reference}`);
+    console.log(`   Categoría: ${normalizedDecision.category}`);
+    console.log(`   Potencial viral: ${normalizedDecision.viralPotential}/10`);
+
+    return normalizedDecision;
   }
 
   // ✅ REFACTORIZACIÓN: GENERAR HOOK VIRAL
@@ -293,6 +317,32 @@ Comparte esto con alguien que lo necesite hoy.
 Dios te bendiga.`;
   }
 
+  // GENERAR DESCRIPCIÓN ESPECÍFICA PARA THUMBNAIL
+  // Agent 9 usará esta descripción como base y la enriquecerá con su framework
+  generateThumbnailDescription(verse, hook) {
+    // Generar descripción que capture la esencia visual del mensaje
+    const thumbnailDescriptions = {
+      'consuelo': `Persona encontrando paz y consuelo divino, expresión de alivio y esperanza, atmosfera cálida y acogedora relacionada con: ${hook.text}`,
+      'fortaleza': `Persona victoriosa sobre desafío, postura de determinación y poder divino, atmósfera triunfante relacionada con: ${hook.text}`,
+      'salvación': `Persona recibiendo luz divina, brazos abiertos en gratitud, atmósfera de redención y nueva vida relacionada con: ${hook.text}`,
+      'propósito': `Persona descubriendo su camino, mirada hacia adelante con claridad, atmósfera de descubrimiento relacionada con: ${hook.text}`,
+      'esperanza': `Persona emergiendo de oscuridad hacia luz, expresión de renovación, atmósfera de transformación relacionada con: ${hook.text}`,
+      'guía': `Persona recibiendo dirección divina, postura contemplativa y receptiva, atmósfera de sabiduría relacionada con: ${hook.text}`,
+      'descanso': `Persona en paz y descanso completo, expresión serena, atmósfera tranquila relacionada con: ${hook.text}`
+    };
+
+    const baseDescription = thumbnailDescriptions[verse.category] ||
+      `Persona experimentando ${verse.emotionalBenefit}, expresión emocional auténtica relacionada con: ${hook.text}`;
+
+    return {
+      subject: baseDescription,
+      emotion: verse.emotionalBenefit,
+      context: `Versículo ${verse.reference} - ${verse.text.substring(0, 100)}...`,
+      hookText: hook.text,
+      category: verse.category
+    };
+  }
+
   // GENERAR METADATA DE YOUTUBE
   generateYouTubeMetadata(verse) {
     const title = `${verse.reference} - ${verse.emotionalBenefit} | ${verse.category}`;
@@ -340,12 +390,12 @@ Dios te bendiga.`;
   // ❌ ELIMINADO: generateDynamicVisuals()
   // ✅ REFACTORIZACIÓN: Ahora usa visualDescriptions de Agent 0
 
-  // ✅ REFACTORIZACIÓN: GENERAR GUIÓN COMPLETO
-  generateMasterScript() {
-    // ✅ NUEVO: Cargar decisión de Agent 0
-    const verse = this.loadAgent0Decision();
+  // ✅ MIGRACIÓN A SUPABASE: GENERAR GUIÓN COMPLETO (ahora async)
+  async generateMasterScript() {
+    // ✅ SUPABASE: Cargar decisión de Agent 0 desde base de datos
+    const verse = await this.loadAgent0Decision();
 
-    console.log('\n🎬 Generando guión a partir de decisión de Agent 0...');
+    console.log('\n🎬 Generando guión a partir de decisión de Agent 0 (Supabase)...');
 
     const hook = this.generateViralHook(verse);
     const intro = this.generateIntroWithFramework(verse);
@@ -365,12 +415,14 @@ Dios te bendiga.`;
     const script = {
       metadata: {
         verse: verse.reference,
+        agentDecisionId: verse.id, // ✅ SUPABASE: Guardar el ID de la decisión de Agent 0
         category: verse.category,
         hookType: hook.type,
         targetAudience: verse.targetAudience,
         keywords: verse.keywords,
         duration: 120,
         emotionalBenefit: verse.emotionalBenefit,
+        thumbnailDescription: this.generateThumbnailDescription(verse, hook), // ✅ NUEVO: Descripción específica para thumbnail
         generatedAt: new Date().toISOString()
       },
       scenes: [
@@ -379,6 +431,7 @@ Dios te bendiga.`;
           timing: "0:00-0:05",
           duration: 5,
           type: "hook",
+          aspectRatio: "16:9", // YouTube normal (horizontal)
           hookType: hook.type,
           text: hook.text,
           visualDescription: visuals.hook, // ✅ DINÁMICO
@@ -391,6 +444,7 @@ Dios te bendiga.`;
           timing: "0:05-0:30",
           duration: 25,
           type: "intro",
+          aspectRatio: "16:9", // YouTube normal (horizontal)
           framework: "hook-shock-validate-tease",
           text: intro,
           visualDescription: visuals.intro, // ✅ DINÁMICO
@@ -403,6 +457,7 @@ Dios te bendiga.`;
           timing: "0:30-1:15",
           duration: 45,
           type: "body",
+          aspectRatio: "16:9", // YouTube normal (horizontal)
           storytellingTechnique: "metaphors-anecdotes-openloops",
           text: body,
           visualDescription: visuals.body, // ✅ DINÁMICO
@@ -415,6 +470,7 @@ Dios te bendiga.`;
           timing: "1:15-1:40",
           duration: 25,
           type: "application",
+          aspectRatio: "16:9", // YouTube normal (horizontal)
           text: application,
           visualDescription: visuals.application, // ✅ DINÁMICO
           visualStyle: "personal, transformador, íntimo, emocional",
@@ -426,6 +482,7 @@ Dios te bendiga.`;
           timing: "1:40-2:00",
           duration: 20,
           type: "cta",
+          aspectRatio: "16:9", // YouTube normal (horizontal)
           text: cta,
           visualDescription: visuals.cta, // ✅ DINÁMICO
           visualStyle: "triunfante, esperanzador, glorioso, cierre épico",
@@ -440,34 +497,52 @@ Dios te bendiga.`;
     return script;
   }
 
-  // GUARDAR GUIÓN
-  saveScript(script) {
+  // ✅ MIGRACIÓN A SUPABASE: Guardar guión en base de datos
+  async saveScript(script, agentDecisionId) {
+    // Guardar en Supabase
+    const savedScript = await saveGeneratedScript(script, agentDecisionId);
+
+    // También guardar en filesystem como backup (opcional)
     const timestamp = Date.now();
     const verseFileName = script.metadata.verse.replace(/[:\s]/g, '-');
     const filename = `script-${verseFileName}-${timestamp}.json`;
     const filepath = path.join(this.outputDir, filename);
 
-    fs.writeFileSync(filepath, JSON.stringify(script, null, 2));
+    try {
+      fs.writeFileSync(filepath, JSON.stringify(script, null, 2));
+      console.log(`📁 Backup guardado en filesystem: ${filename}`);
+    } catch (error) {
+      console.log(`⚠️  No se pudo guardar backup en filesystem: ${error.message}`);
+    }
 
     return {
+      id: savedScript.id,
       filename,
       filepath,
-      verse: script.metadata.verse
+      verse: script.metadata.verse,
+      supabaseId: savedScript.id
     };
   }
 
-  // LEER FEEDBACK DE ANALYTICS (Sistema de Aprendizaje)
-  loadAnalyticsFeedback() {
-    const feedbackPath = path.join(__dirname, '../logs/analytics-feedback.json');
+  // ✅ MIGRACIÓN A SUPABASE: Leer feedback de analytics desde base de datos
+  async loadAnalyticsFeedback() {
+    const feedback = await getLatestAnalyticsFeedback();
 
-    if (!fs.existsSync(feedbackPath)) {
+    if (!feedback) {
       console.log('ℹ️  No hay feedback de analytics todavía (primera ejecución)');
       return null;
     }
 
     try {
-      const feedbackData = JSON.parse(fs.readFileSync(feedbackPath, 'utf-8'));
-      console.log('📊 FEEDBACK DE ANALYTICS CARGADO:');
+      // Convertir a formato esperado (snake_case a camelCase)
+      const feedbackData = {
+        lastUpdate: feedback.last_update,
+        totalVideosAnalyzed: feedback.total_videos_analyzed,
+        agentInstructions: feedback.agent_instructions,
+        learningInsights: feedback.learning_insights
+      };
+
+      console.log('📊 FEEDBACK DE ANALYTICS CARGADO DESDE SUPABASE:');
       console.log(`   Última actualización: ${new Date(feedbackData.lastUpdate).toLocaleString()}`);
       console.log(`   Videos analizados: ${feedbackData.totalVideosAnalyzed || 0}`);
 
@@ -520,16 +595,19 @@ Dios te bendiga.`;
     return selectedVerse;
   }
 
-  // EJECUTAR AGENTE
-  run() {
+  // ✅ MIGRACIÓN A SUPABASE: EJECUTAR AGENTE (ahora async)
+  async run() {
     console.log('\n🎬 AGENTE 1: GUIONISTA MAESTRO VIRAL');
-    console.log('🔥 Generando guión con técnicas VIRALES de YouTube...\n');
+    console.log('🔥 Generando guión con técnicas VIRALES de YouTube (Supabase)...\n');
 
-    // PASO 1: Cargar feedback de analytics (APRENDIZAJE)
-    const feedback = this.loadAnalyticsFeedback();
+    // PASO 1: Cargar feedback de analytics (APRENDIZAJE) - ahora async
+    const feedback = await this.loadAnalyticsFeedback();
 
-    // PASO 2: Generar guión (aplicando aprendizajes si existen)
-    const script = this.generateMasterScript();
+    // PASO 2: Generar guión (aplicando aprendizajes si existen) - ahora async
+    const script = await this.generateMasterScript();
+
+    // Obtener el ID de la decisión de Agent 0 para asociar el script
+    const agentDecisionId = script.metadata.agentDecisionId;
 
     // PASO 3: Aplicar feedback al versículo seleccionado
     // ✅ REFACTORIZACIÓN: Ya no usa MASTER_VERSES
@@ -553,10 +631,12 @@ Dios te bendiga.`;
       console.log(`   Aplicado hook type '${bestHookType}' (mejor performance)`);
     }
 
-    const saved = this.saveScript(script);
+    // PASO 4: Guardar script en Supabase - ahora async y pasa agentDecisionId
+    const saved = await this.saveScript(script, agentDecisionId);
 
     console.log(`✅ Guión viral generado: ${saved.verse}`);
     console.log(`📁 Archivo: ${saved.filename}`);
+    console.log(`💾 Supabase ID: ${saved.supabaseId}`);
     console.log(`🎯 Hook Type: ${script.metadata.hookType}`);
     console.log(`🎯 Objetivo: ${script.metadata.emotionalBenefit}`);
     console.log(`📊 Keywords SEO: ${script.metadata.keywords.join(', ')}`);

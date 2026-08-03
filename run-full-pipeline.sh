@@ -1,178 +1,295 @@
 #!/bin/bash
 
-################################################################################
-# 🚀 FULL PIPELINE - YouTube Bible Content Automation
-################################################################################
-#
-# Pipeline completo de generación y publicación de videos bíblicos:
-# Agent 1 → 2 → 3 → 4 → 5 → 6 → 7 (templates) → 8 (YouTube)
-#
-# USAGE: ./run-full-pipeline.sh ["Versículo específico"]
-#
-# Si no se proporciona versículo, Agent 1 seleccionará uno aleatorio
-#
-################################################################################
+# 🧪 Automated Pipeline Testing & Scoring System
+# Executes full pipeline and generates autonomy scorecard
 
-set -e  # Exit on error
+set -e  # Exit on error (disabled for scoring purposes)
 
-# Colors
+# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Timestamp
-START_TIME=$(date +%s)
+# Configuration
+VERSE="${1:-Isaías 41:10}"  # Default test verse
+TIMESTAMP=$(date +%s%3N)
+SCORECARD_FILE="output/pipeline-scorecard-${TIMESTAMP}.json"
 
-echo -e "${BLUE}"
-echo "════════════════════════════════════════════════════════════════"
-echo "🚀 FULL PIPELINE - YouTube Bible Content Automation"
-echo "════════════════════════════════════════════════════════════════"
-echo -e "${NC}"
+# Initialize scores
+declare -A AUTONOMY
+declare -A RELIABILITY
+declare -A RECOVERY
+declare -A LOGGING
 
-# ══════════════════════════════════════════════════════════════════
-# AGENT 1: VERSE SELECTOR
-# ══════════════════════════════════════════════════════════════════
-
-echo -e "\n${YELLOW}[AGENT 1]${NC} 📖 Seleccionando versículo..."
-
-if [ -z "$1" ]; then
-  # Versículo aleatorio
-  node agents/agent-1-verse-selector.js > /tmp/agent1-output.txt
-else
-  # Versículo específico
-  VERSE="$1"
-  echo "   → Versículo forzado: $VERSE"
-fi
-
-# Extraer versículo del output
-if [ -z "$VERSE" ]; then
-  VERSE=$(grep -oP '"verse":\s*"\K[^"]+' /tmp/agent1-output.txt | head -1)
-fi
-
-echo -e "${GREEN}   ✅ Versículo seleccionado: $VERSE${NC}\n"
-
-# ══════════════════════════════════════════════════════════════════
-# AGENT 2: SCRIPTWRITER
-# ══════════════════════════════════════════════════════════════════
-
-echo -e "${YELLOW}[AGENT 2]${NC} 🎨 Generando prompts visuales cinematográficos..."
-node agents/agent-2-image-designer-pro.js "$VERSE"
-echo -e "${GREEN}   ✅ Prompts visuales generados${NC}\n"
-
-# ══════════════════════════════════════════════════════════════════
-# AGENT 3: BATCH GENERATOR
-# ══════════════════════════════════════════════════════════════════
-
-echo -e "${YELLOW}[AGENT 3]${NC} 📦 Preparando batch para Magnific..."
-node agents/agent-3-batch-generator.js "$VERSE"
-echo -e "${GREEN}   ✅ Batch preparado${NC}\n"
-
-# ══════════════════════════════════════════════════════════════════
-# AGENT 4: EXECUTE BATCH (MAGNIFIC)
-# ══════════════════════════════════════════════════════════════════
-
-echo -e "${YELLOW}[AGENT 4]${NC} 🎥 Generando imágenes con Magnific..."
-echo -e "${BLUE}   ⏱️  Tiempo estimado: 3-5 minutos (5 imágenes)${NC}"
-# Agent 4 se ejecutará desde Claude Code con MCP access
-echo -e "${BLUE}   ℹ️  Requiere Magnific MCP autenticado${NC}\n"
-
-# ══════════════════════════════════════════════════════════════════
-# AGENT 5: VIDEO ANIMATOR
-# ══════════════════════════════════════════════════════════════════
-
-echo -e "${YELLOW}[AGENT 5]${NC} 🎬 Animando imágenes a video..."
-echo -e "${BLUE}   ⏱️  Tiempo estimado: 8-12 minutos${NC}"
-# Agent 5 también requiere Magnific MCP
-echo -e "${BLUE}   ℹ️  Requiere Magnific MCP autenticado${NC}\n"
-
-# ══════════════════════════════════════════════════════════════════
-# AGENT 6: AUDIO VOICE EXPERT (TTS)
-# ══════════════════════════════════════════════════════════════════
-
-echo -e "${YELLOW}[AGENT 6]${NC} 🎤 Generando audio TTS..."
-# Agent 6 también requiere Magnific MCP para TTS
-echo -e "${BLUE}   ℹ️  Requiere Magnific MCP autenticado${NC}\n"
-
-# ══════════════════════════════════════════════════════════════════
-# AGENT 7: VIDEO EDITOR CON TEMPLATES
-# ══════════════════════════════════════════════════════════════════
-
-echo -e "${YELLOW}[AGENT 7]${NC} 🎬 Ensamblando video con templates..."
-echo -e "${BLUE}   → Estructura: Intro (5s) + Clips (90s) + Outro (15s) + Audio (120s)${NC}"
-node agents/agent-7-with-templates.js "$VERSE"
-echo -e "${GREEN}   ✅ Video final ensamblado${NC}\n"
-
-# ══════════════════════════════════════════════════════════════════
-# AGENT QA: VALIDACIÓN DE CALIDAD
-# ══════════════════════════════════════════════════════════════════
-
-echo -e "${YELLOW}[AGENT QA]${NC} 🔍 Validando calidad del video..."
-echo -e "${BLUE}   → Verificando: duración, audio, resolución, códecs, bitrate, estructura${NC}"
-
-if ! node agents/agent-qa-validator.js "$VERSE"; then
-  echo -e "${RED}   ❌ El video NO pasó la validación de calidad${NC}"
-  echo -e "${RED}   ❌ Revise el reporte en output/qa-reports/${NC}\n"
-  exit 1
-fi
-
-echo -e "${GREEN}   ✅ Video validado correctamente${NC}\n"
-
-# ══════════════════════════════════════════════════════════════════
-# OBTENER PATH DEL VIDEO FINAL
-# ══════════════════════════════════════════════════════════════════
-
-VERSE_FILENAME=$(echo "$VERSE" | sed 's/[: ]/-/g')
-FINAL_VIDEO="output/final-videos/final-${VERSE_FILENAME}.mp4"
-
-if [ ! -f "$FINAL_VIDEO" ]; then
-  echo -e "${RED}❌ Error: Video final no encontrado en $FINAL_VIDEO${NC}"
-  exit 1
-fi
-
-# ══════════════════════════════════════════════════════════════════
-# AGENT 8: YOUTUBE UPLOADER (COMENTADO PARA PRUEBA LOCAL)
-# ══════════════════════════════════════════════════════════════════
-
-echo -e "${BLUE}[AGENT 8]${NC} 📤 YouTube upload OMITIDO (modo prueba)"
-echo -e "${BLUE}   → Video listo en: $FINAL_VIDEO${NC}\n"
-
-# echo -e "${YELLOW}[AGENT 8]${NC} 📤 Subiendo a YouTube..."
-# echo -e "${BLUE}   → Video: $FINAL_VIDEO${NC}"
-#
-# # Generar título y descripción
-# TITLE="$VERSE - Palabra de Dios | Reina-Valera 1960"
-# DESCRIPTION="📖 $VERSE
-#
-# 🙏 Versículo del día de la Biblia Reina-Valera 1960.
-#
-# ✨ Suscríbete para recibir versículos bíblicos diarios
-# 🔔 Activa la campana
-# 💬 Comparte tu testimonio
-#
-# #BibliaDiaria #ReinaValera1960 #PalabraDeDios"
-#
-# # Subir a YouTube
-# node agents/agent-8-youtube-uploader.js "$FINAL_VIDEO" "$TITLE" "$DESCRIPTION"
-# echo -e "${GREEN}   ✅ Video publicado en YouTube${NC}\n"
-
-# ══════════════════════════════════════════════════════════════════
-# RESUMEN FINAL
-# ══════════════════════════════════════════════════════════════════
-
-END_TIME=$(date +%s)
-DURATION=$((END_TIME - START_TIME))
-MINUTES=$((DURATION / 60))
-SECONDS=$((DURATION % 60))
-
-echo -e "\n${GREEN}"
-echo "════════════════════════════════════════════════════════════════"
-echo "✅ PIPELINE COMPLETADO EXITOSAMENTE"
-echo "════════════════════════════════════════════════════════════════"
-echo -e "${NC}"
-echo "📖 Versículo: $VERSE"
-echo "📁 Video: $FINAL_VIDEO"
-echo "⏱️  Tiempo total: ${MINUTES}m ${SECONDS}s"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}🧪 PIPELINE AUTONOMY TEST${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "📖 Versículo de prueba: ${VERSE}"
+echo -e "⏰ Inicio: $(date)"
 echo ""
-echo -e "${BLUE}🎉 ¡Video publicado y listo en YouTube!${NC}\n"
+
+# Function to evaluate an agent
+evaluate_agent() {
+  local agent_name=$1
+  local agent_script=$2
+  local expected_output=$3
+  local required_fields=$4
+  
+  echo -e "${YELLOW}Testing: ${agent_name}${NC}"
+  
+  local start_time=$(date +%s)
+  local autonomy_score=0
+  local reliability_score=0
+  local recovery_score=0
+  local logging_score=0
+  
+  # Execute agent
+  set +e  # Don't exit on error
+  node "${agent_script}" "${VERSE}" > /tmp/agent_output.log 2>&1
+  local exit_code=$?
+  set -e
+  
+  local end_time=$(date +%s)
+  local duration=$((end_time - start_time))
+  
+  # 1. Autonomy Score (requires no manual intervention)
+  if [ $exit_code -eq 0 ]; then
+    autonomy_score=100
+    echo -e "  ${GREEN}✓${NC} Autonomía: 100% (sin intervención manual)"
+  else
+    autonomy_score=0
+    echo -e "  ${RED}✗${NC} Autonomía: 0% (falló, requiere intervención)"
+  fi
+  
+  # 2. Reliability Score (output file exists and valid)
+  # Expand wildcard if present
+  local actual_file="${expected_output}"
+  if [[ "${expected_output}" == *"*"* ]]; then
+    # Find most recent file matching pattern
+    actual_file=$(ls -t ${expected_output} 2>/dev/null | head -1)
+  fi
+
+  if [ -f "${actual_file}" ]; then
+    # Check if it's valid JSON using node (no jq dependency)
+    if node -e "JSON.parse(require('fs').readFileSync('${actual_file}', 'utf8'))" 2>/dev/null; then
+      reliability_score=100
+      echo -e "  ${GREEN}✓${NC} Confiabilidad: 100% (output válido: ${actual_file})"
+
+      # Check required fields using node (supports nested paths like 'metadata.verse')
+      local missing_fields=0
+      IFS=',' read -ra FIELDS <<< "$required_fields"
+      for field in "${FIELDS[@]}"; do
+        # Use node to check if field exists (handles nested paths correctly)
+        if ! node -e "const obj = JSON.parse(require('fs').readFileSync('${actual_file}', 'utf8')); const path = '${field}'.split('.'); let value = obj; for (const key of path) { if (value === undefined || value === null) process.exit(1); value = value[key]; } if (value === undefined) process.exit(1);" 2>/dev/null; then
+          missing_fields=$((missing_fields + 1))
+          echo -e "  ${RED}✗${NC} Campo faltante: ${field}"
+        fi
+      done
+
+      if [ $missing_fields -gt 0 ]; then
+        reliability_score=$((100 - (missing_fields * 20)))
+      fi
+    else
+      reliability_score=0
+      echo -e "  ${RED}✗${NC} Confiabilidad: 0% (JSON inválido)"
+    fi
+  else
+    reliability_score=0
+    echo -e "  ${RED}✗${NC} Confiabilidad: 0% (sin output - buscando: ${expected_output})"
+  fi
+  
+  # 3. Recovery Score (logs show retry attempts)
+  if grep -q "Intento\|Reintentando\|retry" /tmp/agent_output.log 2>/dev/null; then
+    recovery_score=100
+    echo -e "  ${GREEN}✓${NC} Recuperación: 100% (reintentos detectados)"
+  else
+    recovery_score=50
+    echo -e "  ${YELLOW}○${NC} Recuperación: 50% (no hay evidencia de reintentos)"
+  fi
+  
+  # 4. Logging Score (detailed logs present)
+  if grep -q "📊\|✅\|❌\|⚠️" /tmp/agent_output.log 2>/dev/null; then
+    logging_score=100
+    echo -e "  ${GREEN}✓${NC} Logging: 100% (logs detallados)"
+  else
+    logging_score=50
+    echo -e "  ${YELLOW}○${NC} Logging: 50% (logs básicos)"
+  fi
+  
+  # Store scores
+  AUTONOMY[$agent_name]=$autonomy_score
+  RELIABILITY[$agent_name]=$reliability_score
+  RECOVERY[$agent_name]=$recovery_score
+  LOGGING[$agent_name]=$logging_score
+  
+  local avg_score=$(( (autonomy_score + reliability_score + recovery_score + logging_score) / 4 ))
+  echo -e "  ${BLUE}Score Total: ${avg_score}%${NC}"
+  echo -e "  Duración: ${duration}s"
+  echo ""
+}
+
+# Clean previous outputs (essential for test autonomy - prevents batch conflicts)
+echo "🧹 Limpiando outputs previos..."
+rm -rf output/agent-0-decision.json
+rm -rf output/scripts/script-*
+rm -rf output/image-batches/batch-*
+rm -rf output/image-metadata/images-*
+rm -rf output/video-metadata/video-*
+echo ""
+
+# Execute pipeline
+echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}EJECUTANDO PIPELINE COMPLETO${NC}"
+echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+
+# Agent 0: Verse Researcher
+evaluate_agent "Agent-0-Verse-Researcher" \
+  "agents/agent-0-verse-researcher.js" \
+  "output/agent-0-decision.json" \
+  "reference,viralPotential,category"
+
+# Agent 1: Viral Scriptwriter
+evaluate_agent "Agent-1-Viral-Scriptwriter" \
+  "agents/agent-1-viral-scriptwriter.js" \
+  "output/scripts/script-*.json" \
+  "metadata.verse,scenes"
+
+# Agent 2: Image Designer PRO
+evaluate_agent "Agent-2-Image-Designer-PRO" \
+  "agents/agent-2-image-designer-pro.js" \
+  "output/image-prompts/visual-design-PRO-*.json" \
+  "verse,scenes"
+
+# Agent 3: Batch Generator
+evaluate_agent "Agent-3-Batch-Generator" \
+  "agents/agent-3-batch-generator.js" \
+  "output/image-batches/batch-*.json" \
+  "verse,scenes"
+
+# Agent 4: Magnific MCP (Images)
+evaluate_agent "Agent-4-Magnific-Images" \
+  "agents/agent-4-magnific-mcp.js" \
+  "output/image-metadata/images-*.json" \
+  "verse,images"
+
+# Guardian: Images
+evaluate_agent "Guardian-Images" \
+  "agents/guardian-images.js" \
+  "output/image-metadata/images-*.json" \
+  "images"
+
+# Agent 5: Video Animator
+evaluate_agent "Agent-5-Video-Animator" \
+  "agents/agent-5-video-animator.js" \
+  "output/video-metadata/video-*.json" \
+  "clips,totalDuration"
+
+# Guardian: Videos
+evaluate_agent "Guardian-Videos" \
+  "agents/guardian-videos.js" \
+  "output/video-metadata/video-*.json" \
+  "clips"
+
+# Generate Scorecard JSON
+echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}GENERANDO SCORECARD${NC}"
+echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+
+# Calculate averages
+total_autonomy=0
+total_reliability=0
+total_recovery=0
+total_logging=0
+agent_count=0
+
+for agent in "${!AUTONOMY[@]}"; do
+  total_autonomy=$((total_autonomy + AUTONOMY[$agent]))
+  total_reliability=$((total_reliability + RELIABILITY[$agent]))
+  total_recovery=$((total_recovery + RECOVERY[$agent]))
+  total_logging=$((total_logging + LOGGING[$agent]))
+  agent_count=$((agent_count + 1))
+done
+
+avg_autonomy=$((total_autonomy / agent_count))
+avg_reliability=$((total_reliability / agent_count))
+avg_recovery=$((total_recovery / agent_count))
+avg_logging=$((total_logging / agent_count))
+avg_total=$(( (avg_autonomy + avg_reliability + avg_recovery + avg_logging) / 4 ))
+
+# Create JSON scorecard
+cat > "${SCORECARD_FILE}" << EOF
+{
+  "testDate": "$(date -Iseconds)",
+  "verse": "${VERSE}",
+  "agents": {
+EOF
+
+first=true
+for agent in "${!AUTONOMY[@]}"; do
+  if [ "$first" = false ]; then
+    echo "," >> "${SCORECARD_FILE}"
+  fi
+  first=false
+  
+  cat >> "${SCORECARD_FILE}" << EOF
+    "${agent}": {
+      "autonomy": ${AUTONOMY[$agent]},
+      "reliability": ${RELIABILITY[$agent]},
+      "recovery": ${RECOVERY[$agent]},
+      "logging": ${LOGGING[$agent]},
+      "average": $(( (AUTONOMY[$agent] + RELIABILITY[$agent] + RECOVERY[$agent] + LOGGING[$agent]) / 4 ))
+    }
+EOF
+done
+
+cat >> "${SCORECARD_FILE}" << EOF
+
+  },
+  "averages": {
+    "autonomy": ${avg_autonomy},
+    "reliability": ${avg_reliability},
+    "recovery": ${avg_recovery},
+    "logging": ${avg_logging},
+    "total": ${avg_total}
+  }
+}
+EOF
+
+echo -e "${GREEN}✓ Scorecard guardado en: ${SCORECARD_FILE}${NC}"
+echo ""
+
+# Display final results
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}📊 RESULTADOS FINALES${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+echo "| Agente                     | Autonomía | Confiabilidad | Recuperación | Logging | Total |"
+echo "|----------------------------|-----------|---------------|--------------|---------|-------|"
+
+for agent in "${!AUTONOMY[@]}"; do
+  avg=$(( (AUTONOMY[$agent] + RELIABILITY[$agent] + RECOVERY[$agent] + LOGGING[$agent]) / 4 ))
+  printf "| %-26s | %8d%% | %12d%% | %11d%% | %6d%% | %4d%% |\n" \
+    "$agent" "${AUTONOMY[$agent]}" "${RELIABILITY[$agent]}" "${RECOVERY[$agent]}" "${LOGGING[$agent]}" "$avg"
+done
+
+echo "|----------------------------|-----------|---------------|--------------|---------|-------|"
+printf "| %-26s | %8d%% | %12d%% | %11d%% | %6d%% | %4d%% |\n" \
+  "PROMEDIO TOTAL" "$avg_autonomy" "$avg_reliability" "$avg_recovery" "$avg_logging" "$avg_total"
+echo ""
+
+# Final summary
+if [ $avg_total -ge 80 ]; then
+  echo -e "${GREEN}✅ PIPELINE ${avg_total}% AUTÓNOMO - Excelente${NC}"
+elif [ $avg_total -ge 60 ]; then
+  echo -e "${YELLOW}⚠️  PIPELINE ${avg_total}% AUTÓNOMO - Requiere mejoras${NC}"
+else
+  echo -e "${RED}❌ PIPELINE ${avg_total}% AUTÓNOMO - Requiere intervención significativa${NC}"
+fi
+
+echo ""
+echo -e "⏰ Finalizado: $(date)"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"

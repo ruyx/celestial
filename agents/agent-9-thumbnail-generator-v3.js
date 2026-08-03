@@ -56,70 +56,70 @@ if (!fs.existsSync(THUMBNAILS_DIR)) {
  */
 const CATEGORY_TEMPLATES = {
   consuelo: {
-    emotion: 'serene peaceful expression, eyes gently closed or looking upward with hope',
+    emotion: 'DEEPLY EMOTIONAL expression, tears of relief streaming down face, eyes closed in profound peace, mouth slightly open as if releasing a deep breath of relief',
     backgroundColor: 'soft dark gradient from midnight blue to black',
-    facePosition: 'right side (30-40% of frame)',
-    faceLook: 'looking upward peacefully, gentle divine light on face',
-    lightingStyle: 'soft golden hour lighting from top, warm ethereal glow, heavenly atmosphere',
-    textColor: '#FFD700',        // Oro/amarillo (de referencias)
-    textColorSecondary: '#FFFFFF', // Blanco
-    textStroke: '#000000',        // Negro para sombra
-    sceneDescription: 'Person in prayer or meditation, hands clasped, peaceful biblical setting'
+    facePosition: 'center-right (40-50% of frame)',
+    faceLook: 'looking upward with INTENSE emotional relief, face illuminated by divine light, tear on cheek catching the light',
+    lightingStyle: 'DRAMATIC golden hour lighting from top, warm ethereal glow, heavenly atmosphere with visible light rays, cinematic high-contrast lighting',
+    textColor: '#FFD700',
+    textColorSecondary: '#FFFFFF',
+    textStroke: '#000000',
+    sceneDescription: 'Person in deeply emotional prayer, hands clasped to chest, tears of joy, profound relief expression, biblical comfort scene with dramatic lighting'
   },
   fortaleza: {
-    emotion: 'confident strong expression with determination',
-    backgroundColor: 'deep navy blue gradient with dramatic lighting',
-    facePosition: 'left side (30-40% of frame)',
-    faceLook: 'looking at camera with confidence, direct eye contact',
-    lightingStyle: 'dramatic rim lighting from side, blue and orange tones, powerful atmosphere',
+    emotion: 'FIERCE determined expression, intense focused eyes staring directly at camera, jaw set with unshakeable confidence, slight forward lean showing power',
+    backgroundColor: 'deep navy blue gradient with DRAMATIC contrast lighting',
+    facePosition: 'center (40-50% of frame)',
+    faceLook: 'PIERCING direct eye contact with viewer, commanding presence, warrior intensity, eyebrows slightly furrowed with determination',
+    lightingStyle: 'DRAMATIC rim lighting from side creating sharp highlights, blue and fiery orange tones, POWERFUL cinematic atmosphere, strong shadows defining facial features',
     textColor: '#FFA500',
     textColorSecondary: '#FFFFFF',
     textStroke: '#000000',
-    sceneDescription: 'Strong biblical figure, David with harp or warrior pose, confident stance'
+    sceneDescription: 'Biblical warrior or prophet in commanding pose, intense presence, David facing Goliath energy, powerful confident stance with dramatic backlight'
   },
   esperanza: {
-    emotion: 'hopeful expression with eyes toward bright light',
-    backgroundColor: 'dark gradient with golden rays breaking through clouds',
-    facePosition: 'left side (30-40% of frame)',
-    faceLook: 'looking toward light source, hopeful gaze upward',
-    lightingStyle: 'dramatic sunburst from top-right, golden hour, rays of hope',
+    emotion: 'AWE-STRUCK hopeful expression, eyes WIDE with wonder looking toward brilliant light, mouth slightly open in amazement, face radiating pure hope',
+    backgroundColor: 'dark gradient with BRILLIANT golden rays breaking through storm clouds',
+    facePosition: 'center-left (40-50% of frame)',
+    faceLook: 'looking toward BRILLIANT light source with AWE and HOPE, eyes reflecting the divine light, overwhelmed with hopeful wonder',
+    lightingStyle: 'DRAMATIC sunburst from top-right, INTENSE golden hour with visible God rays, rays of divine hope piercing darkness, cinematic high-drama lighting',
     textColor: '#FFD700',
     textColorSecondary: '#FFFFFF',
     textStroke: '#000000',
-    sceneDescription: 'Person looking toward sunrise/divine light, hopeful biblical scene'
+    sceneDescription: 'Person experiencing breakthrough moment, face illuminated by divine sunrise breaking through darkness, hopeful biblical scene with DRAMATIC light contrast'
   },
   amor: {
-    emotion: 'warm caring expression with gentle smile',
-    backgroundColor: 'soft warm gradient from red to pink',
-    facePosition: 'right side (30-40% of frame)',
-    faceLook: 'looking with warmth and compassion',
-    lightingStyle: 'soft diffused warm lighting, golden loving glow',
+    emotion: 'DEEPLY COMPASSIONATE expression, gentle tears of love, soft warm smile with eyes full of divine love, tender emotional vulnerability',
+    backgroundColor: 'soft warm gradient from deep red to golden pink',
+    facePosition: 'center-right (40-50% of frame)',
+    faceLook: 'looking with PROFOUND warmth and compassion, eyes conveying unconditional divine love, gentle emotional intensity',
+    lightingStyle: 'soft diffused WARM golden lighting, loving glow surrounding face, tender cinematic quality, warm emotional atmosphere',
     textColor: '#FFFFFF',
     textColorSecondary: '#FF6B6B',
     textStroke: '#8B0000',
-    sceneDescription: 'Loving embrace, Jesus with children, compassionate biblical scene'
+    sceneDescription: 'Loving biblical scene, Jesus-like compassion, tender embrace moment, profound emotional connection, warm intimate biblical setting'
   },
   sabiduria: {
-    emotion: 'thoughtful contemplative expression',
-    backgroundColor: 'deep purple gradient',
-    facePosition: 'left side (30-40% of frame)',
-    faceLook: 'looking thoughtfully, slight knowing smile',
-    lightingStyle: 'soft side lighting, purple and gold tones, wisdom atmosphere',
+    emotion: 'PROFOUND contemplative expression, wise knowing eyes with depth of understanding, slight meaningful smile of divine wisdom, aged thoughtful face',
+    backgroundColor: 'deep royal purple gradient with golden accents',
+    facePosition: 'center-left (40-50% of frame)',
+    faceLook: 'looking with DEEP wisdom and understanding, eyes conveying ancient biblical knowledge, contemplative gaze with slight knowing expression',
+    lightingStyle: 'DRAMATIC side lighting creating strong shadows, purple and GOLDEN tones highlighting wisdom, sophisticated cinematic atmosphere',
     textColor: '#FFD700',
     textColorSecondary: '#FFFFFF',
     textStroke: '#000000',
-    sceneDescription: 'Wise elder reading scripture, scholarly biblical setting'
+    sceneDescription: 'Wise biblical elder or prophet, ancient scrolls visible, scholarly setting, deep contemplation, profound wisdom radiating from expression'
   },
   fe: {
-    emotion: 'reverent peaceful expression',
-    backgroundColor: 'soft teal to dark green gradient',
-    facePosition: 'right side (30-40% of frame)',
-    faceLook: 'eyes closed or looking upward reverently',
-    lightingStyle: 'divine light from above, soft ethereal glow, spiritual atmosphere',
+    emotion: 'REVERENT worship expression, face lifted toward heaven with INTENSE devotion, eyes closed in profound spiritual connection, peaceful but POWERFUL faith',
+    backgroundColor: 'soft teal to deep emerald gradient with divine light',
+    facePosition: 'center-right (40-50% of frame)',
+    faceLook: 'eyes closed or looking upward with INTENSE reverence, face bathed in divine light, expression of complete surrender and faith',
+    lightingStyle: 'DIVINE light from above creating DRAMATIC illumination, soft ethereal glow, SPIRITUAL atmosphere with visible light beams, cinematic worship lighting',
     textColor: '#FFFFFF',
     textColorSecondary: '#90EE90',
     textStroke: '#2F4F2F',
-    sceneDescription: 'Person in worship, hands raised, spiritual biblical moment'
+    sceneDescription: 'Person in INTENSE worship, hands raised toward heaven, spiritual breakthrough moment, profound faith expression, biblical worship scene with dramatic divine lighting'
   }
 };
 

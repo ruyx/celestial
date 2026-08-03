@@ -398,8 +398,16 @@ app.post('/agent-3', async (req, res) => {
   console.log('\n📦 Executing Agent 3: Batch Generator');
 
   try {
+    const verse = req.body?.verse;
+    if (!verse) {
+      return res.status(400).json({
+        success: false,
+        error: 'Verse parameter required in request body'
+      });
+    }
+
     const result = execSync(
-      'node agents/agent-3-batch-generator.js',
+      `node agents/agent-3-batch-generator.js "${verse}"`,
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, cwd: BASE_DIR }
     );
 
@@ -461,19 +469,57 @@ app.post('/guardian-images', async (req, res) => {
 
   console.log(`\n👼 Executing Guardian Images + Agent 4 for: ${verse}`);
 
-    // Paso 1: Ejecutar Agent 4 para generar las imágenes (Magnific MCP)
-    // Ejecutamos directamente sin SSH para evitar bloqueos de Claude Code
-    console.log('🎨 Step 1/2: Running Agent 4 (Magnific MCP) directly...');
+    // Paso 0.5: Sincronizar archivos de Agent 2 y Agent 3 HACIA el servidor remoto
+    // CRÍTICO: Agents 0-3 generan archivos localmente, pero Agent 4 corre remotamente
+    // Necesitamos copiar batch y visual design AL servidor remoto ANTES de ejecutar Agent 4
+    console.log('\n📤 Step 0.5/3: Syncing batch and visual design files TO remote server...');
+    const verseFilename = verse.replace(/[:\s]/g, '-');
+
+    // Sincronizar batch file (Agent 3) al servidor remoto
+    execSync(
+      `scp output/image-batches/batch-${verseFilename}-*.json desarrollo@10.254.80.29:~/project-yt/output/image-batches/ || echo "No batch files to sync"`,
+      { encoding: 'utf-8', cwd: BASE_DIR }
+    );
+    console.log(`✅ Synced batch file for ${verse} to remote server`);
+
+    // Sincronizar visual design file (Agent 2) al servidor remoto
+    execSync(
+      `scp output/image-prompts/visual-design-PRO-${verseFilename}-*.json desarrollo@10.254.80.29:~/project-yt/output/image-prompts/ || echo "No visual design files to sync"`,
+      { encoding: 'utf-8', cwd: BASE_DIR }
+    );
+    console.log(`✅ Synced visual design file for ${verse} to remote server`);
+
+    // Paso 1: Ejecutar Agent 4 via SSH en el servidor remoto con MCP configurado
+    // Agent 4 requiere MCP para Magnific - solo está disponible en servidor desarrollo@10.254.80.29
+    console.log('\n🎨 Step 1/3: Running Agent 4 (Magnific MCP) via SSH on remote server...');
     const agent4Result = execSync(
-      `bash run-agent-4.sh`,
+      `ssh desarrollo@10.254.80.29 "cd ~/project-yt && bash run-agent-4.sh \\"${verse}\\""`,
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 15 * 60 * 1000, cwd: BASE_DIR }
     );
     console.log(agent4Result);
 
+    // Paso 1.5: Sincronizar metadata y base-images desde servidor remoto a local
+    // CRÍTICO: Agent 4 corre en remoto, Guardian corre local - necesitamos copiar los archivos
+    console.log('\n📦 Step 1.5/3: Syncing metadata and base-images from remote server to local...');
+
+    // Sincronizar image metadata
+    execSync(
+      `scp desarrollo@10.254.80.29:~/project-yt/output/image-metadata/images-${verseFilename}-*.json output/image-metadata/ || echo "No metadata files to sync"`,
+      { encoding: 'utf-8', cwd: BASE_DIR }
+    );
+    console.log(`✅ Synced image metadata for ${verse}`);
+
+    // Sincronizar base images
+    execSync(
+      `scp desarrollo@10.254.80.29:~/project-yt/output/base-images/base-${verseFilename}-*.png output/base-images/ || echo "No base image files to sync"`,
+      { encoding: 'utf-8', cwd: BASE_DIR }
+    );
+    console.log(`✅ Synced base images for ${verse}`);
+
     // Paso 2: Ejecutar Guardian para validar las imágenes
-    console.log('\n👼 Step 2/2: Running Guardian to validate images...');
+    console.log('\n👼 Step 2/3: Running Guardian to validate images...');
     const guardianResult = execSync(
-      `node agents/guardian-images.js "${verse}"`,
+      `node agents/guardian-images-FIXED.js "${verse}"`,
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 15 * 60 * 1000, cwd: BASE_DIR }
     );
     console.log(guardianResult);
@@ -523,19 +569,62 @@ app.post('/guardian-videos', async (req, res) => {
 
     console.log(`\n👼 Executing Guardian Videos + Agent 5 for: ${verse}`);
 
+    // Paso 0.5: Sincronizar archivos necesarios HACIA el servidor remoto
+    // Agent 5 necesita: script (Agent 1), visual design (Agent 2), images (Agent 4)
+    console.log('\n📤 Step 0.5/3: Syncing required files TO remote server...');
+    const verseFilename = verse.replace(/[:\s]/g, '-');
+
+    // Sincronizar script (Agent 1)
+    execSync(
+      `scp output/scripts/script-${verseFilename}-*.json desarrollo@10.254.80.29:~/project-yt/output/scripts/ || echo "No script files to sync"`,
+      { encoding: 'utf-8', cwd: BASE_DIR }
+    );
+
+    // Sincronizar visual design (Agent 2)
+    execSync(
+      `scp output/image-prompts/visual-design-PRO-${verseFilename}-*.json desarrollo@10.254.80.29:~/project-yt/output/image-prompts/ || echo "No visual design to sync"`,
+      { encoding: 'utf-8', cwd: BASE_DIR }
+    );
+
+    // Sincronizar image metadata (Agent 4)
+    execSync(
+      `scp output/image-metadata/images-${verseFilename}-*.json desarrollo@10.254.80.29:~/project-yt/output/image-metadata/ || echo "No image metadata to sync"`,
+      { encoding: 'utf-8', cwd: BASE_DIR }
+    );
+
+    console.log(`✅ Synced all required files for Agent 5 to remote server`);
+
     // Paso 1: Ejecutar Agent 5 para generar los videos (Magnific MCP)
-    // Ejecutamos directamente sin SSH para evitar bloqueos de Claude Code
-    console.log('🎬 Step 1/2: Running Agent 5 (Magnific MCP) directly...');
+    // Ejecutar Agent 5 via SSH en el servidor remoto con MCP configurado
+    // Agent 5 requiere MCP para Magnific video animation - solo disponible en servidor desarrollo@10.254.80.29
+    console.log('\n🎬 Step 1/3: Running Agent 5 (Magnific MCP) via SSH on remote server...');
     const agent5Result = execSync(
-      `bash run-agent-5.sh`,
+      `ssh desarrollo@10.254.80.29 "cd ~/project-yt && bash run-agent-5.sh \\"${verse}\\""`,
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 30 * 60 * 1000, cwd: BASE_DIR }
     );
     console.log(agent5Result);
 
-    // Paso 2: Ejecutar Guardian para validar los videos
-    console.log('\n👼 Step 2/2: Running Guardian to validate videos...');
+    // Paso 1.5: Sincronizar metadata de video desde servidor remoto a local
+    console.log('\n📦 Step 1.5/3: Syncing video metadata and clips from remote server to local...');
+
+    // Sincronizar video metadata
+    execSync(
+      `scp desarrollo@10.254.80.29:~/project-yt/output/video-metadata/videos-${verseFilename}-*.json output/video-metadata/ || echo "No video metadata to sync"`,
+      { encoding: 'utf-8', cwd: BASE_DIR }
+    );
+    console.log(`✅ Synced video metadata for ${verse}`);
+
+    // Sincronizar clips de video
+    execSync(
+      `scp desarrollo@10.254.80.29:~/project-yt/output/clips/clip-${verseFilename}-*.mp4 output/clips/ || echo "No video clips to sync"`,
+      { encoding: 'utf-8', cwd: BASE_DIR }
+    );
+    console.log(`✅ Synced video clips for ${verse}`);
+
+    // Paso 2: Ejecutar Guardian FIXED para validar los videos
+    console.log('\n👼 Step 2/3: Running Guardian FIXED to validate videos...');
     const guardianResult = execSync(
-      `node agents/guardian-videos.js "${verse}"`,
+      `node agents/guardian-videos-FIXED.js "${verse}"`,
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 20 * 60 * 1000, cwd: BASE_DIR }
     );
     console.log(guardianResult);
@@ -579,18 +668,49 @@ app.post('/guardian-audio', async (req, res) => {
 
     console.log(`\n👼 Executing Guardian Audio + Agent 6 for: ${verse}`);
 
-    // PASO 1: Ejecutar Agent 6 MCP para generar el audio via Magnific
-    console.log('\n🎙️  PASO 1: Ejecutando Agent 6 MCP (audio generation via Magnific)...');
+    // PASO 0.5: Sincronizar archivos necesarios HACIA el servidor remoto
+    // Agent 6 necesita: script (Agent 1) para leer el texto TTS
+    console.log('\n📤 PASO 0.5/3: Sincronizando script TO remote server...');
+    const verseFilename = verse.replace(/[:\s]/g, '-');
+
+    // Sincronizar script (Agent 1)
+    execSync(
+      `scp output/scripts/script-${verseFilename}-*.json desarrollo@10.254.80.29:~/project-yt/output/scripts/ || echo "No script files to sync"`,
+      { encoding: 'utf-8', cwd: BASE_DIR }
+    );
+    console.log(`✅ Synced script file for ${verse} to remote server`);
+
+    // PASO 1: Ejecutar Agent 6 via SSH en el servidor remoto con MCP configurado
+    // Agent 6 requiere MCP para audio TTS via Magnific - solo disponible en servidor desarrollo@10.254.80.29
+    console.log('\n🎙️  PASO 1: Ejecutando Agent 6 MCP via SSH on remote server (audio generation via Magnific)...');
     const agent6Result = execSync(
-      `bash run-agent-6.sh`,
+      `ssh desarrollo@10.254.80.29 "cd ~/project-yt && bash run-agent-6.sh \\"${verse}\\""`,
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 15 * 60 * 1000, cwd: BASE_DIR }
     );
     console.log(agent6Result);
 
+    // PASO 1.5: Sincronizar metadata de audio desde servidor remoto a local
+    console.log('\n📦 PASO 1.5/3: Sincronizando audio metadata desde servidor remoto a local...');
+    const verseFilename = verse.replace(/[:\s]/g, '-');
+
+    // Sincronizar audio metadata
+    execSync(
+      `scp desarrollo@10.254.80.29:~/project-yt/output/audio-metadata/audio-${verseFilename}-*.json output/audio-metadata/ || echo "No audio metadata to sync"`,
+      { encoding: 'utf-8', cwd: BASE_DIR }
+    );
+    console.log(`✅ Synced audio metadata for ${verse}`);
+
+    // Sincronizar archivos de audio
+    execSync(
+      `scp desarrollo@10.254.80.29:~/project-yt/output/audio/audio-${verseFilename}-*.mp3 output/audio/ || echo "No audio files to sync"`,
+      { encoding: 'utf-8', cwd: BASE_DIR }
+    );
+    console.log(`✅ Synced audio files for ${verse}`);
+
     // PASO 2: Ejecutar Guardian Audio para validar
-    console.log('\n👼 PASO 2: Ejecutando Guardian Audio (validación)...');
+    console.log('\n👼 PASO 2/3: Ejecutando Guardian Audio (validación)...');
     const guardianResult = execSync(
-      `node agents/guardian-audio.js "${verse}"`,
+      `node agents/guardian-audio-FIXED.js "${verse}"`,
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 10 * 60 * 1000, cwd: BASE_DIR }
     );
     console.log(guardianResult);
@@ -635,12 +755,21 @@ app.post('/guardian-final-video', async (req, res) => {
 
     console.log(`\n👼 Executing Guardian Final Video + Agent 7 for: ${verse}`);
 
-    const result = execSync(
-      `node agents/guardian-final-video.js "${verse}"`,
-      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 15 * 60 * 1000, cwd: BASE_DIR }
+    // PASO 1: Ejecutar Agent 7 MCP para ensamblar el video final
+    console.log('\n🎬 PASO 1: Ejecutando Agent 7 MCP (video assembly via Magnific)...');
+    const agent7Result = execSync(
+      `bash run-agent-7.sh "${verse}"`,
+      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 20 * 60 * 1000, cwd: BASE_DIR }
     );
+    console.log(agent7Result);
 
-    console.log(result);
+    // PASO 2: Ejecutar Guardian Final Video para validar
+    console.log('\n👼 PASO 2: Ejecutando Guardian Final Video (validación)...');
+    const guardianResult = execSync(
+      `node agents/guardian-final-video-FIXED.js "${verse}"`,
+      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 10 * 60 * 1000, cwd: BASE_DIR }
+    );
+    console.log(guardianResult);
 
     const verseSlug = verse.replace(/[:\s]/g, '-');
     const videoPath = path.join(BASE_DIR, `output/final-videos/final-${verseSlug}.mp4`);
@@ -739,7 +868,7 @@ app.post('/guardian-upload', async (req, res) => {
     console.log(`\n👼 Executing Guardian Upload + YouTube Upload for: ${verse}`);
 
     const result = execSync(
-      `node agents/guardian-upload.js "${verse}"`,
+      `node agents/guardian-upload-FIXED.js "${verse}"`,
       { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, timeout: 40 * 60 * 1000, cwd: BASE_DIR }
     );
 

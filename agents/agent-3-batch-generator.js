@@ -118,7 +118,19 @@ function processBatch(designPath) {
  */
 if (require.main === module) {
   try {
-    // Buscar el diseño visual más reciente
+    // Obtener versículo del argumento CLI
+    const verseArg = process.argv[2];
+
+    if (!verseArg) {
+      throw new Error('Debes proporcionar el versículo como argumento.\nUso: node agent-3-batch-generator.js "Mateo 11:28"');
+    }
+
+    console.log(`\n🔍 Buscando diseño visual para: ${verseArg}\n`);
+
+    // Normalizar el versículo para búsqueda (ej: "Mateo 11:28" → "Mateo-11-28")
+    const verseNormalized = verseArg.replace(/[:\s]/g, '-');
+
+    // Buscar diseños que coincidan con el versículo
     const files = fs.readdirSync(DESIGN_DIR)
       .filter(f => f.startsWith('visual-design-PRO-') && f.endsWith('.json'))
       .map(f => ({
@@ -126,14 +138,27 @@ if (require.main === module) {
         path: path.join(DESIGN_DIR, f),
         time: fs.statSync(path.join(DESIGN_DIR, f)).mtime.getTime()
       }))
+      .filter(f => f.name.includes(verseNormalized)) // IMPORTANTE: Filtrar por versículo
       .sort((a, b) => b.time - a.time);
 
     if (files.length === 0) {
-      throw new Error('No se encontró ningún diseño visual para procesar');
+      throw new Error(`No se encontró diseño visual para el versículo: ${verseArg}\n` +
+                      `Asegúrate de que Agent-2 haya generado el archivo visual-design-PRO-${verseNormalized}-*.json`);
     }
 
     const latestDesign = files[0];
-    console.log(`\n📂 Diseño encontrado: ${latestDesign.name}\n`);
+    console.log(`📂 Diseño encontrado: ${latestDesign.name}`);
+
+    // Verificar que el diseño corresponda al versículo solicitado
+    const designData = JSON.parse(fs.readFileSync(latestDesign.path, 'utf-8'));
+    if (designData.verse !== verseArg) {
+      throw new Error(`Inconsistencia detectada:\n` +
+                      `  - Versículo solicitado: ${verseArg}\n` +
+                      `  - Versículo en archivo: ${designData.verse}\n` +
+                      `Esto es un bug crítico de consistencia.`);
+    }
+
+    console.log(`✅ Verificación de consistencia: ${designData.verse} ✓\n`);
 
     const result = processBatch(latestDesign.path);
 

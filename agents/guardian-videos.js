@@ -16,10 +16,10 @@ const fs = require('fs');
 const path = require('path');
 
 // Configuración
-const MAX_RETRIES = 5;
-const BASE_DELAY_MS = 2000; // 2 segundos base
-const MAX_DELAY_MS = 60000; // 60 segundos máximo
-const TIMEOUT_MS = 15 * 60 * 1000; // 15 minutos timeout total (videos tardan más)
+const MAX_RETRIES = 10; // ✅ 10 intentos para cubrir 25 minutos
+const BASE_DELAY_MS = 60000; // ✅ 1 minuto base entre intentos
+const MAX_DELAY_MS = 5 * 60 * 1000; // ✅ 5 minutos máximo entre intentos (capped)
+const TIMEOUT_MS = 25 * 60 * 1000; // ✅ 25 minutos timeout total (si pasa de aquí, es un problema)
 
 const VIDEO_METADATA_DIR = path.join(__dirname, '..', 'output', 'video-metadata');
 
@@ -179,10 +179,12 @@ class VideoGuardian {
    * Validar videos
    */
   validateVideos(metadata) {
-    const total = metadata.clips?.length || 0;
+    // ✅ COMPATIBILIDAD: Aceptar tanto 'clips' como 'videos'
+    const clips = metadata.clips || metadata.videos || [];
+    const total = clips.length;
     const missing = [];
 
-    if (!metadata.clips || metadata.clips.length === 0) {
+    if (clips.length === 0) {
       return {
         isComplete: false,
         total: 0,
@@ -191,13 +193,13 @@ class VideoGuardian {
           clipId: 'N/A',
           sceneId: 'N/A',
           sceneType: 'N/A',
-          reason: 'no_clips_found',
+          reason: 'no_clips_or_videos_found',
           clip: null
         }]
       };
     }
 
-    metadata.clips.forEach(clip => {
+    clips.forEach(clip => {
       const issues = [];
 
       // Verificar status
@@ -211,7 +213,9 @@ class VideoGuardian {
       }
 
       // Verificar URL del video generado
-      if (!clip.videoUrl || clip.videoUrl.trim() === '') {
+      // ✅ COMPATIBILIDAD: Aceptar tanto 'videoUrl' como 'url'
+      const videoUrl = clip.videoUrl || clip.url;
+      if (!videoUrl || videoUrl.trim() === '') {
         issues.push('missing_video_url');
       }
 
@@ -227,7 +231,9 @@ class VideoGuardian {
       }
 
       // Verificar parámetros de Magnific
-      if (!clip.magnificParams || !clip.magnificParams.slug) {
+      // ✅ COMPATIBILIDAD: Aceptar tanto 'magnificParams.slug' como 'model'
+      const hasModel = (clip.magnificParams && clip.magnificParams.slug) || clip.model;
+      if (!hasModel) {
         issues.push('missing_magnific_params');
       }
 
@@ -366,7 +372,7 @@ class VideoGuardian {
 
       // Información adicional sobre cómo regenerar
       if (miss.clip) {
-        const model = miss.clip.magnificParams?.slug || 'unknown';
+        const model = miss.clip.magnificParams?.slug || miss.clip.model || 'unknown';
         console.log(`      - Modelo: ${model}`);
         console.log(`      - Duración esperada: ${miss.clip.duration}s`);
         console.log(`      - Movimiento cámara: ${miss.clip.cameraMotion || 'static'}`);
@@ -396,7 +402,9 @@ class VideoGuardian {
     console.log(`\n📊 Estadísticas:`);
     console.log(`   - Duración: ${duration.toFixed(2)}s`);
     console.log(`   - Reintentos: ${result.totalRetries}`);
-    console.log(`   - Videos completados: ${result.metadata.clips?.length || 0}`);
+    // ✅ COMPATIBILIDAD: Aceptar tanto 'clips' como 'videos'
+    const videosCount = (result.metadata.clips || result.metadata.videos || []).length;
+    console.log(`   - Videos completados: ${videosCount}`);
     console.log(`   - Duración total: ${result.metadata.totalDuration || 0}s`);
     console.log(`\n📁 Metadata guardada en:`);
     console.log(`   ${VIDEO_METADATA_DIR}\n`);
