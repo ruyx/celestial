@@ -8,21 +8,33 @@
 
 ## 📋 TASK
 
-1. **Find the latest video batch file FOR THE SPECIFIC VERSE**:
+1. **Find the image metadata file FOR THE SPECIFIC VERSE** (from Agent 4):
    - The verse will be specified in the prompt (e.g., "Romanos 8:28")
    - Convert verse to filename format: spaces → `-`, colons → `-` (e.g., "Romanos 8:28" → "Romanos-8-28")
-   - Find the most recent file matching: `output/video-metadata/video-{verse-filename}-*.json`
-   - **CRITICAL**: Do NOT load batches from other verses - ONLY load the batch matching the specified verse
-   - Sort by mtime if multiple batches exist for the same verse
+   - Find the most recent file matching: `output/image-metadata/images-{verse-filename}-*.json`
+   - **CRITICAL**: Do NOT load metadata from other verses - ONLY load the file matching the specified verse
+   - Sort by mtime if multiple files exist for the same verse
 
-2. **For each clip in the batch:**
+2. **Find the script file FOR THE SPECIFIC VERSE** (from Agent 1):
+   - Find the most recent file matching: `output/scripts/script-{verse-filename}-*.json`
+   - This contains scene durations and camera movements needed for video generation
+
+3. **For each image in the metadata (images array):**
+   - Match the image's `sceneType` with the corresponding scene in the script
+   - Extract from script: `duration` and `cameraMovement`
+   - Map `cameraMovement` to Magnific camera motion format:
+     - "slow zoom in" / "zoom in" → "pushIn"
+     - "gentle pan" / "pan" → "static"
+     - "slow aerial rise" → "craneUp"
+     - "static close-up" → "static"
+     - "dramatic zoom out" → "pullOut"
    - Call `mcp__magnific__video_generate` with:
-     - `video.clips[0].prompt`: The cinematic prompt from the batch
-     - `video.clips[0].duration`: Duration in seconds from the batch
-     - `video.clips[0].aspectRatio`: Aspect ratio (always "16:9")
-     - `video.clips[0].cameraMotion`: Camera motion type
-     - `video.clips[0].slug`: Model slug (e.g., "bytedance-seedance-pro-2.0")
-     - `video.clips[0].keyframes.start.url`: The static image URL to animate
+     - `video.clips[0].prompt`: Use the image's original `prompt` field
+     - `video.clips[0].duration`: Duration from script scene (default: 10 if not found)
+     - `video.clips[0].aspectRatio`: Use image's `aspectRatio` (usually "16:9")
+     - `video.clips[0].cameraMotion`: Mapped camera motion from script
+     - `video.clips[0].slug`: "bytedance-seedance-pro-2.0" (default model)
+     - `video.clips[0].keyframes.start.url`: The image's `url` field
      - `video.clips[0].keyframes.start.type`: Always "image"
 
 3. **After EACH video is generated:**
@@ -71,11 +83,12 @@
 ```
 
 ### Important Notes
-- **Never** hardcode image URLs - always use the URL from the batch file
-- **Never** hardcode aspect ratios - always use "16:9" from the batch
-- **Always** use the camera motion specified in the batch
+- **Never** hardcode image URLs - always use the URL from the image metadata
+- **Never** hardcode aspect ratios - always use the value from image metadata
+- **Always** map camera movement from script to Magnific camera motion format
 - **Duration limits**: Seedance max 15s, Kling max 10s per clip
 - **Cost**: Each video costs credits (check with simulate_cost if needed)
+- **Scene matching**: Match images to script scenes by `sceneType` field (hook, intro, body, application, cta)
 
 ---
 
@@ -116,16 +129,20 @@ Save to: `output/video-metadata/videos-completed-{verse}-{timestamp}.json`
 ## 🔄 EXECUTION FLOW
 
 ```
-1. Read latest video batch file (video-*.json)
-2. For each clip (1-5 typically):
-   ┌─────────────────────────────────┐
-   │ 3. Call video_generate          │
-   │ 4. Call creations_wait           │
-   │ 5. Extract url + identifier      │
-   │ 6. Save progress incrementally   │ ← CRITICAL: Save after EACH video
-   └─────────────────────────────────┘
-7. Report summary (X/Y videos succeeded)
-8. Exit 0 if all succeeded, exit 1 if any failed
+1. Read latest image metadata file (output/image-metadata/images-*.json)
+2. Read corresponding script file (output/scripts/script-*.json)
+3. For each image in metadata.images[] (1-5 typically):
+   ┌──────────────────────────────────────────────┐
+   │ 4. Match image.sceneType with script scene   │
+   │ 5. Extract duration & cameraMovement         │
+   │ 6. Map cameraMovement to Magnific format     │
+   │ 7. Call video_generate with image URL        │
+   │ 8. Call creations_wait                       │
+   │ 9. Extract url + identifier                  │
+   │ 10. Save progress incrementally              │ ← CRITICAL: Save after EACH video
+   └──────────────────────────────────────────────┘
+11. Report summary (X/Y videos succeeded)
+12. Exit 0 if all succeeded, exit 1 if any failed
 ```
 
 ---
@@ -135,7 +152,8 @@ Save to: `output/video-metadata/videos-completed-{verse}-{timestamp}.json`
 - **Moderation block**: Save as "failed", continue
 - **API limit**: Save current progress, report error
 - **Timeout**: Save current progress, report which videos completed
-- **Missing batch**: Exit with error immediately
+- **Missing image metadata**: Exit with error immediately
+- **Missing script file**: Continue with default durations (10s) and camera motion ("static")
 
 ---
 
